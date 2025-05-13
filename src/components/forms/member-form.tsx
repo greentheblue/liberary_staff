@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getSession } from '@/lib/session';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,16 +53,13 @@ export default function MemberForm({ memberId }: MemberFormProps) {
       class: "",
       division: "",
     },
-  });
-
+  });  // Watch for changes to memberType and update isSchool state accordingly
+  const memberType = form.watch("memberType");
+  
   useEffect(() => {
-    try {
-      const session = getSession();
-      setIsSchool(session?.entity_type === 'school');
-    } catch (error) {
-      console.error('Error getting session:', error);
-    }
-  }, []);
+    // If the member is a STUDENT, we show the school-specific fields
+    setIsSchool(memberType === "STUDENT");
+  }, [memberType]);
 
   useEffect(() => {
     async function fetchMember() {
