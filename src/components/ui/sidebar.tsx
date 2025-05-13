@@ -28,6 +28,11 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
+    {
+    title: "Dashboard",
+    path: "/dashboard",
+    icon: <FileText className="w-5 h-5" />,
+  },
   {
     title: "Book",
     icon: <Boxes className="w-5 h-5" />,
@@ -64,11 +69,6 @@ const menuItems: MenuItem[] = [
           icon: <Users className="w-4 h-4" />,
        },
     ],
-  },
-  {
-    title: "Report",
-    path: "/dashboard/report",
-    icon: <FileText className="w-5 h-5" />,
   },
 ];
 

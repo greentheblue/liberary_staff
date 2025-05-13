@@ -44,11 +44,23 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    // Get the entity information first
+    const entity = await entityPrisma.entity.findFirst({
+      select: { 
+        type: true 
+      }
+    });
+
+    // Get members
     const members = await entityPrisma.member.findMany({
       orderBy: { createdAt: 'desc' },
     });
     
-    return NextResponse.json(members);
+    // Return both entity type info and members
+    return NextResponse.json({
+      entityType: entity?.type || "",
+      members
+    });
   } catch (error) {
     console.error("Error fetching members:", error);
     return NextResponse.json(
