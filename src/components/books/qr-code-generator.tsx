@@ -109,23 +109,18 @@ export default function QRCodeGenerator({ books }: QRCodeGeneratorProps) {
         unit: 'mm',
         format: 'a4'
       });
-      
-      const qrCodeSize = 45; // mm
+        const qrCodeSize = 45; // mm
       const margin = 10; // mm
       const boxSpacing = 5; // mm
       const boxesPerRow = 3;
       const boxesPerCol = 4;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let pageCount = 0;
       
       for (let i = 0; i < books.length; i++) {
         const book = books[i];
         const boxIndex = i % (boxesPerRow * boxesPerCol);
-        
-        // Add a new page if needed
+          // Add a new page if needed
         if (boxIndex === 0 && i > 0) {
           doc.addPage();
-          pageCount++;
         }
         
         const col = boxIndex % boxesPerRow;
