@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -70,8 +77,8 @@ export default function BookForm({ initialData, isEditing }: BookFormProps) {
       });
     }
   };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -195,8 +202,7 @@ export default function BookForm({ initialData, isEditing }: BookFormProps) {
               disabled={loading}
             />
           </div>
-          
-          <div className="space-y-2">
+            <div className="space-y-2">
             <Label>Category</Label>
             {noCategoriesAvailable ? (
               <div className="p-2 border rounded-md">
@@ -208,20 +214,23 @@ export default function BookForm({ initialData, isEditing }: BookFormProps) {
                 </Button>
               </div>
             ) : (
-              <select
+              <Select
                 name="categoryId"
-                className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm"
                 value={formData.categoryId}
-                onChange={handleChange}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
                 disabled={loading}
               >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
           

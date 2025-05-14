@@ -14,7 +14,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, QrCode } from 'lucide-react';
+import QRCodeGenerator from '@/components/books/qr-code-generator';
 
 interface Book {
   id: string;
@@ -88,11 +89,11 @@ export default function BooksPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <Card>
+    <div className="container mx-auto p-4">      <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl">Books Management</CardTitle>
-          <div className="space-x-2">
+          <div className="space-x-2 flex flex-wrap gap-2 items-center">
+            <QRCodeGenerator books={books} />
             <Button variant="outline" asChild>
               <Link href="/dashboard/books/categories">
                 Manage Categories
