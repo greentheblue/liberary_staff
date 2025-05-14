@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { entityPrisma } from "@/lib/db";
-import { cookies } from "next/headers";
 import { auth } from "@/auth";
 
 interface RouteContext {
@@ -67,9 +66,16 @@ export async function PATCH(
 
     const { id } = params;
     const body = await request.json();
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
-
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },
@@ -159,9 +165,16 @@ export async function DELETE(
     const params = await context.params;
 
     const { id } = params;
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
-
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },

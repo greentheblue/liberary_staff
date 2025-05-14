@@ -62,7 +62,7 @@ model Staff {
 }
 
 model Member {
-  id          String       @id @default(cuid())
+  id          String       @id
   name        String
   memberType  MemberType
   gender      Gender
@@ -88,7 +88,7 @@ model BookCategory {
 }
 
 model Book {
-  id             String       @id @default(cuid())
+  id             String       @id 
   title          String
   author         String
   copies         Int

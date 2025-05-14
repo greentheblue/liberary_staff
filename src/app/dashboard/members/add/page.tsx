@@ -13,7 +13,7 @@ export default function AddMemberPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="mb-6">
-        <Link href="/members">
+        <Link href="/dashboard/members">
           <Button variant="ghost" size="sm" className="gap-1">
             <ArrowLeft className="h-4 w-4" />
             Back to Members

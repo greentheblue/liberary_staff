@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import {entityPrisma} from '@/lib/db';
 import { z } from 'zod';
 
+/**
+ * Generates a unique 10-digit member ID that doesn't exist in the database
+ * @returns Promise with the unique ID string
+ */
+async function generateUniqueId(): Promise<string> {
+  let uniqueId: string = "";
+  let isUnique = false;
+  
+  while (!isUnique) {
+    // Generate random 10-digit number
+    uniqueId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    
+    // Check if ID already exists
+    const existingMember = await entityPrisma.member.findUnique({
+      where: { id: uniqueId }
+    });
+    
+    if (!existingMember) {
+      isUnique = true;
+    }
+  }
+  
+  return uniqueId;
+}
+
 // Schema validation for member creation
 const memberSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -24,12 +49,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Validation error", details: validationResult.error.format() },
         { status: 400 }
-      );
-    }
+      );    }
     
-    // Create member
+    // Generate a unique ID for the new member
+    const uniqueId = await generateUniqueId();
+    
+    // Create member with custom ID
     const member = await entityPrisma.member.create({
-      data: validationResult.data,
+      data: {
+        ...validationResult.data,
+        id: uniqueId
+      },
     });
     
     return NextResponse.json(member, { status: 201 });

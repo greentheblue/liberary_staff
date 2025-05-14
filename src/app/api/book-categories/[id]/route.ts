@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { entityPrisma } from "@/lib/db";
-import { cookies } from "next/headers";
+import { auth } from "@/auth";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,8 +13,22 @@ export async function GET( request: Request,
   const params = await context.params;
 
     const { id } = params;
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
+    if (!entityId) {
+      return NextResponse.json(
+        { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
 
     if (!entityId) {
       return NextResponse.json(
@@ -55,8 +69,22 @@ export async function PATCH( request: Request,
 
     const { id } = params;
     const body = await request.json();
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
+    if (!entityId) {
+      return NextResponse.json(
+        { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
 
     if (!entityId) {
       return NextResponse.json(
@@ -92,8 +120,22 @@ export async function DELETE( request: Request,
     const params = await context.params;
 
     const { id } = params;
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
+    if (!entityId) {
+      return NextResponse.json(
+        { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
 
     if (!entityId) {
       return NextResponse.json(

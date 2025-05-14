@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { entityPrisma } from "@/lib/db";
-import { cookies } from "next/headers";
 import { auth } from "@/auth";
 
 // Get all book categories for the entity
@@ -22,8 +21,6 @@ export async function GET() {
         { status: 400 }
       );
     }
-
-    console.log("Entity ID:", entityId);
 
     const categories = await entityPrisma.bookCategory.findMany({
       where: {
@@ -49,9 +46,15 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // Get entityId from cookie
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
+   const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
     
     if (!entityId) {
       return NextResponse.json(

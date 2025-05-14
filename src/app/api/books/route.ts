@@ -1,7 +1,31 @@
 import { NextResponse } from "next/server";
 import { entityPrisma } from "@/lib/db";
-import { cookies } from "next/headers";
 import { auth } from "@/auth";
+
+/**
+ * Generates a unique 5-digit book ID that doesn't exist in the database
+ * @returns Promise with the unique ID string
+ */
+async function generateUniqueBookId(): Promise<string> {
+  let bookId: string = "";
+  let isUnique = false;
+  
+  while (!isUnique) {
+    // Generate random 5-digit number
+    bookId = Math.floor(10000 + Math.random() * 90000).toString();
+    
+    // Check if ID already exists
+    const existingBook = await entityPrisma.book.findUnique({
+      where: { id: bookId }
+    });
+    
+    if (!existingBook) {
+      isUnique = true;
+    }
+  }
+  
+  return bookId;
+}
 
 // Get all books for the entity
 export async function GET() {
@@ -53,9 +77,16 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
     // Get entityId from cookie
-    const cookieStore = await cookies();
-    const entityId = cookieStore.get("entityId")?.value;
+   
+    const entityId = session.user.entityId;
     
     if (!entityId) {
       return NextResponse.json(
@@ -77,10 +108,12 @@ export async function POST(req: Request) {
         { error: "Invalid category" },
         { status: 400 }
       );
-    }
+    }    // Generate a unique ID for the new book
+    const bookId = await generateUniqueBookId();
 
     const book = await entityPrisma.book.create({
       data: {
+        id: bookId,
         title: body.title,
         author: body.author,
         copies: parseInt(body.copies),
