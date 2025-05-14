@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Pencil, Trash2, Plus, QrCode } from 'lucide-react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
 import QRCodeGenerator from '@/components/books/qr-code-generator';
 
 interface Book {

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { QrCode, QrCodeIcon } from 'lucide-react';
+import { QrCodeIcon } from 'lucide-react';
 
 interface Book {
   id: string;
@@ -111,13 +111,11 @@ export default function QRCodeGenerator({ books }: QRCodeGeneratorProps) {
       });
       
       const qrCodeSize = 45; // mm
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
       const margin = 10; // mm
       const boxSpacing = 5; // mm
       const boxesPerRow = 3;
       const boxesPerCol = 4;
-      
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       let pageCount = 0;
       
       for (let i = 0; i < books.length; i++) {
