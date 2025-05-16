@@ -53,8 +53,8 @@ export default function Dashboard() {
   const [selectedBooks, setSelectedBooks] = useState<Book[]>([]);
   const [searchingBook, setSearchingBook] = useState(false);
   const [showIssueSection, setShowIssueSection] = useState(false);
-  const [issuingBooks, setIssuingBooks] = useState(false);
-  const [memberIssuedBooks, setMemberIssuedBooks] = useState<IssuedBook[]>([]);
+  const [issuingBooks, setIssuingBooks] = useState(false);  const [memberIssuedBooks, setMemberIssuedBooks] = useState<IssuedBook[]>([]);
+  const [collectingBookId, setCollectingBookId] = useState<string | null>(null);
 
   const searchMember = async () => {
     if (!memberId) {
@@ -93,7 +93,7 @@ export default function Dashboard() {
       const response = await fetch(`/api/dashboard/books/${bookId}`);
       if (!response.ok) {
         const errorData = await response.json();
-        toast.error(errorData.error || "Failed to find book");
+        toast.error(errorData.error || "Book not found");
         return;
       }
 
@@ -110,7 +110,7 @@ export default function Dashboard() {
       toast.success("Book added to the issue list");
     } catch (error) {
       console.error("Error fetching book:", error);
-      toast.error("Failed to find book or book not available");
+      toast.error("Book not found");
     } finally {
       setSearchingBook(false);
     }
@@ -163,9 +163,9 @@ export default function Dashboard() {
       setIssuingBooks(false);
     }
   };
-
   const markAsCollected = async (itemId: string) => {
     try {
+      setCollectingBookId(itemId);
       const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
         method: "PUT",
         headers: {
@@ -180,7 +180,18 @@ export default function Dashboard() {
         throw new Error("Failed to mark as collected");
       }
 
+      const updatedItem = await response.json();
       toast.success("Book marked as collected");
+      
+      // Find the book that was marked as collected
+      let bookId = "";
+      memberIssuedBooks.forEach(issuedBook => {
+        issuedBook.items.forEach(item => {
+          if (item.id === itemId) {
+            bookId = item.bookId;
+          }
+        });
+      });
       
       // Update the local state
       const updatedIssuedBooks = memberIssuedBooks.map(issuedBook => {
@@ -196,43 +207,58 @@ export default function Dashboard() {
       }).filter(Boolean) as IssuedBook[];
       
       setMemberIssuedBooks(updatedIssuedBooks);
+      
+      // Update book availability by incrementing by 1
+      if (bookId) {
+        await fetch(`/api/dashboard/books/${bookId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            incrementAvailableCopies: 1
+          }),
+        });
+      }
     } catch (error) {
       console.error("Error marking book as collected:", error);
       toast.error("Failed to mark book as collected");
+    } finally {
+      setCollectingBookId(null);
     }
   };
 
-  const returnBook = async (itemId: string) => {
-    try {
-      const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
-        method: "DELETE",
-      });
+  // const returnBook = async (itemId: string) => {
+  //   try {
+  //     const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
+  //       method: "DELETE",
+  //     });
 
-      if (!response.ok) {
-        throw new Error("Failed to return book");
-      }
+  //     if (!response.ok) {
+  //       throw new Error("Failed to return book");
+  //     }
 
-      toast.success("Book returned successfully");
+  //     toast.success("Book returned successfully");
       
-      // Update the local state
-      const updatedIssuedBooks = memberIssuedBooks.map(issuedBook => {
-        const updatedItems = issuedBook.items.filter(item => item.id !== itemId);
-        // If no more uncollected items, remove the whole issue
-        if (updatedItems.length === 0) {
-          return null;
-        }
-        return {
-          ...issuedBook,
-          items: updatedItems
-        };
-      }).filter(Boolean) as IssuedBook[];
+  //     // Update the local state
+  //     const updatedIssuedBooks = memberIssuedBooks.map(issuedBook => {
+  //       const updatedItems = issuedBook.items.filter(item => item.id !== itemId);
+  //       // If no more uncollected items, remove the whole issue
+  //       if (updatedItems.length === 0) {
+  //         return null;
+  //       }
+  //       return {
+  //         ...issuedBook,
+  //         items: updatedItems
+  //       };
+  //     }).filter(Boolean) as IssuedBook[];
       
-      setMemberIssuedBooks(updatedIssuedBooks);
-    } catch (error) {
-      console.error("Error returning book:", error);
-      toast.error("Failed to return book");
-    }
-  };
+  //     setMemberIssuedBooks(updatedIssuedBooks);
+  //   } catch (error) {
+  //     console.error("Error returning book:", error);
+  //     toast.error("Failed to return book");
+  //   }
+  // };
 
   const handleKeyPress = (event: React.KeyboardEvent, action: () => void) => {
     if (event.key === "Enter") {
@@ -346,16 +372,17 @@ export default function Dashboard() {
                           <Button
                             size="sm"
                             onClick={() => markAsCollected(item.id)}
+                            disabled={collectingBookId === item.id}
                           >
-                            Mark as Collected
+                            {collectingBookId === item.id ? "Marking..." : "Mark as Collected"}
                           </Button>
-                          <Button
+                          {/* <Button
                             size="sm"
                             variant="destructive"
                             onClick={() => returnBook(item.id)}
                           >
                             Return Book
-                          </Button>
+                          </Button> */}
                         </div>
                       </div>
                     ))}

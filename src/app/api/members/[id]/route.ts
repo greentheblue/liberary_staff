@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import {entityPrisma} from '@/lib/db';
 import { z } from 'zod';
+import { auth } from '@/auth';
 
 const memberSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -23,6 +24,14 @@ export async function GET(
 ) {
   const params = await context.params;
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
     const member = await entityPrisma.member.findUnique({
       where: { id: params.id },
     });

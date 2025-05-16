@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Search, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
+import MemberCardGenerator from "./member-card-generator";
 
 type Member = {
   id: string;
@@ -163,6 +164,9 @@ export default function MemberList() {
                 <TableHead>
                   <Skeleton className="h-5 w-[80px]" />
                 </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-[80px]" />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -193,6 +197,9 @@ export default function MemberList() {
                       </TableCell>
                     </>
                   )}
+                  <TableCell>
+                    <Skeleton className="h-5 w-[60px]" />
+                  </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-[60px]" />
                   </TableCell>
@@ -238,8 +245,7 @@ export default function MemberList() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
+            <TableRow>              <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead>Phone</TableHead>
@@ -250,6 +256,7 @@ export default function MemberList() {
                   <TableHead>Division</TableHead>
                 </>
               )}
+              <TableHead className="text-center">ID Card</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -257,7 +264,7 @@ export default function MemberList() {
             {currentMembers.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={isSchool ? 8 : 6}
+                  colSpan={isSchool ? 9 : 7}
                   className="text-center py-10 text-muted-foreground"
                 >
                   No members found. Try adjusting your filters.
@@ -275,23 +282,27 @@ export default function MemberList() {
                     title={member.address}
                   >
                     {member.address}
-                  </TableCell>
-                  {isSchool && (
-                    <>
-                      <TableCell>{member.class || "-"}</TableCell>
-                      <TableCell>{member.division || "-"}</TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(member.id)}
-                      title="Edit member"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  </TableCell>                      {isSchool && (
+                        <>
+                          <TableCell>{member.class || "-"}</TableCell>
+                          <TableCell>{member.division || "-"}</TableCell>
+                        </>
+                      )}
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          <MemberCardGenerator memberId={member.id} />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(member.id)}
+                          title="Edit member"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                 </TableRow>
               ))
             )}
