@@ -180,7 +180,7 @@ export default function Dashboard() {
         throw new Error("Failed to mark as collected");
       }
 
-      const updatedItem = await response.json();
+      // const updatedItem = await response.json();
       toast.success("Book marked as collected");
       
       // Find the book that was marked as collected

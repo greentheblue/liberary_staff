@@ -4,7 +4,7 @@ import { useState } from 'react';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
 import { toast } from '@/hooks/use-toast';
-import { FileDown, Loader2, UserRound } from 'lucide-react';
+import { FileDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
