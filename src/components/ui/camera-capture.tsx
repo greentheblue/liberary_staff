@@ -172,7 +172,7 @@ export default function CameraCapture({
 
       console.log("Uploading image to server...", process.env.PHP_PUBLIC_IMAGE_UPLOAD_URL);
 
-      const uploadUrl = process.env.PHP_PUBLIC_IMAGE_UPLOAD_URL || '/api/upload-image';
+      const uploadUrl = process.env.PHP_PUBLIC_IMAGE_UPLOAD_URL || 'https://file.greentheblue.org/upload.php';
       const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
