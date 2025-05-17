@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Test Tool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        button { 
+            padding: 10px 15px; 
+            margin: 10px 0; 
+            display: block; 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        video { 
+            width: 100%; 
+            background: #f0f0f0; 
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        canvas {
+            display: none;
+        }
+        #log { 
+            margin-top: 20px; 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            height: 200px; 
+            overflow-y: auto; 
+            font-family: monospace;
+            font-size: 14px;
+            background-color: #f9f9f9;
+        }
+        #captureBtn, #stopBtn {
+            display: none;
+        }
+        #result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #capturedImage {
+            max-width: 100%;
+            border-radius: 8px;
+            display: none;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .system-info {
+            background-color: #eef2f7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        #deviceType {
+            font-weight: bold;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: #f1f1f1;
+            border: none;
+            cursor: pointer;
+            margin: 0 2px;
+        }
+        .tab-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #manualStartBtn {
+            display: none;
+            margin: 10px auto;
+            background-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Test Tool</h1>
+    <p>Use this tool to diagnose camera access issues in your browser.</p>
+    
+    <div class="system-info">
+        <p>Device: <span id="deviceType">Detecting...</span></p>
+        <p>Browser: <span id="browserInfo">Detecting...</span></p>
+        <p>Camera API Support: <span id="apiSupport">Checking...</span></p>
+    </div>
+    
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="showTab('basic')">Basic Test</button>
+        <button class="tab-btn" onclick="showTab('advanced')">Advanced Test</button>
+        <button class="tab-btn" onclick="showTab('troubleshoot')">Troubleshooting</button>
+    </div>
+    
+    <div id="basic-tab" class="tab-content active">
+        <button id="testBtn">Test Camera Access</button>
+        <button id="manualStartBtn">Manual Camera Start</button>
+        <button id="captureBtn">Take Photo</button>
+        <button id="stopBtn">Stop Camera</button>
+        
+        <video id="video" autoplay playsInline></video>
+        <canvas id="canvas"></canvas>
+        
+        <div id="result">
+            <img id="capturedImage" alt="Captured image will appear here">
+        </div>
+    </div>
+    
+    <div id="advanced-tab" class="tab-content">
+        <h3>Advanced Camera Options</h3>
+        <button id="listCamerasBtn">List Available Cameras</button>
+        <div>
+            <label for="facingMode">Camera Facing:</label>
+            <select id="facingMode">
+                <option value="user">Front Camera (user)</option>
+                <option value="environment">Back Camera (environment)</option>
+            </select>
+        </div>
+        <div>
+            <label for="resolution">Resolution:</label>
+            <select id="resolution">
+                <option value="low">Low (320×240)</option>
+                <option value="medium" selected>Medium (640×480)</option>
+                <option value="high">High (1280×720)</option>
+            </select>
+        </div>
+        <button id="advancedTestBtn">Start Advanced Test</button>
+    </div>
+    
+    <div id="troubleshoot-tab" class="tab-content">
+        <h3>Troubleshooting Steps</h3>
+        <ol>
+            <li>
+                <strong>Check browser permissions</strong>
+                <p>Make sure your browser has permission to access the camera.</p>
+                <button onclick="checkPermissions()">Check Permissions</button>
+            </li>
+            <li>
+                <strong>Test file upload as alternative</strong>
+                <p>If camera doesn't work, try file upload instead.</p>
+                <input type="file" accept="image/*" id="fileUpload">
+            </li>
+            <li>
+                <strong>Reset camera settings</strong>
+                <p>If you're experiencing issues, try resetting camera connections.</p>
+                <button onclick="resetCameraSettings()">Reset Camera</button>
+            </li>
+        </ol>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedImage = document.getElementById('capturedImage');
+        const log = document.getElementById('log');
+        const testBtn = document.getElementById('testBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const manualStartBtn = document.getElementById('manualStartBtn');
+        
+        let stream = null;
+        
+        // Detect device and browser
+        function detectEnvironment() {
+            // Detect device type
+            const deviceType = document.getElementById('deviceType');
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            deviceType.textContent = isMobile ? 'Mobile' : 'Desktop';
+            
+            // Detect browser
+            const browserInfo = document.getElementById('browserInfo');
+            let browser = "Unknown";
+            const ua = navigator.userAgent;
+            
+            if (ua.indexOf("Chrome") > -1 && ua.indexOf("Edge") === -1 && ua.indexOf("OPR") === -1) {
+                browser = "Chrome";
+            } else if (ua.indexOf("Firefox") > -1) {
+                browser = "Firefox";
+            } else if (ua.indexOf("Safari") > -1 && ua.indexOf("Chrome") === -1) {
+                browser = "Safari";
+            } else if (ua.indexOf("Edge") > -1 || ua.indexOf("Edg") > -1) {
+                browser = "Edge";
+            } else if (ua.indexOf("OPR") > -1 || ua.indexOf("Opera") > -1) {
+                browser = "Opera";
+            }
+            
+            browserInfo.textContent = `${browser} ${navigator.appVersion.split(" ").pop()}`;
+            
+            // Check API support
+            const apiSupport = document.getElementById('apiSupport');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                apiSupport.textContent = "Available ✓";
+                apiSupport.style.color = "#27ae60";
+            } else {
+                apiSupport.textContent = "Not Available ✗";
+                apiSupport.style.color = "#e74c3c";
+            }
+        }
+        
+        function logMessage(msg, isError = false, isSuccess = false) {
+            const time = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : (isSuccess ? 'success' : '');
+            log.innerHTML += `<div class="${className}">[${time}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(`[${time}] ${msg}`);
+        }
+        
+        testBtn.addEventListener('click', async () => {
+            logMessage('Starting camera test...');
+            testBtn.disabled = true;
+            
+            try {
+                // Check for browser support
+                logMessage('Checking browser environment...');
+                
+                if (typeof window === 'undefined' || !window.navigator) {
+                    logMessage('ERROR: Browser environment not available', true);
+                    return;
+                }
+                
+                logMessage('Checking for navigator.mediaDevices...');
+                if (!navigator.mediaDevices) {
+                    logMessage('WARNING: navigator.mediaDevices not found, trying polyfill...', true);
+                    
+                    // Try polyfill
+                    navigator.mediaDevices = {};
+                    
+                    const getUserMedia = 
+                        navigator.webkitGetUserMedia ||
+                        navigator.mozGetUserMedia ||
+                        navigator.msGetUserMedia;
+                    
+                    if (!getUserMedia) {
+                        logMessage('ERROR: getUserMedia is not supported in this browser', true);
+                        return;
+                    }
+                    
+                    navigator.mediaDevices.getUserMedia = function(constraints) {
+                        return new Promise(function(resolve, reject) {
+                            getUserMedia.call(navigator, constraints, resolve, reject);
+                        });
+                    };
+                    
+                    logMessage('Polyfill applied for getUserMedia');
+                }
+                
+                // Check for getUserMedia support
+                logMessage('Checking getUserMedia support...');
+                if (!navigator.mediaDevices.getUserMedia) {
+                    logMessage('ERROR: getUserMedia is not supported', true);
+                    return;
+                }
+                
+                // First try simple constraints
+                logMessage('Requesting camera access with simple constraints...');
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    logMessage('SUCCESS: Camera accessed with simple constraints', false, true);
+                } catch (simpleError) {
+                    logMessage(`Failed with simple constraints: ${simpleError.name} - ${simpleError.message}`, true);
+                    
+                    // Try with specific constraints
+                    logMessage('Trying with advanced constraints...');
+                    
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    logMessage(`Detected ${isMobile ? 'mobile' : 'desktop'} device`);
+                    
+                    try {
+                        const constraints = {
+                            video: {
+                                facingMode: isMobile ? 'environment' : 'user',
+                                width: { ideal: 640 },
+                                height: { ideal: 480 }
+                            }
+                        };
+                        
+                        logMessage(`Trying with constraints: ${JSON.stringify(constraints)}`);
+                        stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        logMessage('SUCCESS: Camera accessed with advanced constraints', false, true);
+                    } catch (advancedError) {
+                        logMessage(`ERROR: Failed with advanced constraints: ${advancedError.name} - ${advancedError.message}`, true);
+                        manualStartBtn.style.display = 'block';
+                        testBtn.disabled = false;
+                        return;
+                    }
+                }
+                
+                // Set up video element
+                video.srcObject = stream;
+                
+                video.addEventListener('loadedmetadata', () => {
+                    logMessage(`Video metadata loaded, dimensions: ${video.videoWidth}x${video.videoHeight}`);
+                });
+                
+                video.addEventListener('loadeddata', () => {
+                    logMessage('Video data loaded');
+                });
+                
+                video.addEventListener('canplay', () => {
+                    logMessage('Video ready to play');
+                });
+                
+                video.addEventListener('playing', () => {
+                    logMessage('Video is playing', false, true);
+                    captureBtn.style.display = 'block';
+                    stopBtn.style.display = 'block';
+                });
+                
+                video.addEventListener('error', (e) => {
+                    logMessage(`Video element error: ${e}`, true);
+                });
+                
+                try {
+                    // On iOS, auto-play is often blocked, so we need a manual start button
+                    await video.play();
+                    logMessage('Video playback started automatically', false, true);
+                } catch (playError) {
+                    logMessage(`WARNING: Auto-play prevented: ${playError.message}`, true);
+                    manualStartBtn.style.display = 'block';
+                }
+                
+                logMessage('Camera test completed successfully', false, true);
+            } catch (err) {
+                logMessage(`ERROR: ${err.name} - ${err.message}`, true);
+                console.error(err);
+                testBtn.disabled = false;
+            }
+        });
+        
+        // Manual start for browsers that block autoplay
+        manualStartBtn.addEventListener('click', () => {
+            if (video.srcObject) {
+                video.play()
+                    .then(() => {
+                        logMessage('Video playback started manually', false, true);
+                        manualStartBtn.style.display = 'none';
+                    })
+                    .catch(err => {
+                        logMessage(`ERROR: Manual start failed: ${err.message}`, true);
+                    });
+            } else {
+                logMessage('ERROR: No video source available. Run the test first.', true);
+            }
+        });
+        
+        captureBtn.addEventListener('click', () => {
+            try {
+                logMessage('Capturing image...');
+                
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth || video.clientWidth || 640;
+                canvas.height = video.videoHeight || video.clientHeight || 480;
+                
+                // Draw video frame to canvas
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert to data URL
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                
+                // Display captured image
+                capturedImage.src = dataUrl;
+                capturedImage.style.display = 'block';
+                
+                logMessage(`Image captured successfully (${dataUrl.length} bytes)`, false, true);
+            } catch (error) {
+                logMessage(`Error capturing image: ${error.message}`, true);
+            }
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                logMessage('Stopping camera stream...');
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                stream = null;
+                video.srcObject = null;
+                
+                captureBtn.style.display = 'none';
+                stopBtn.style.display = 'none';
+                testBtn.disabled = false;
+                
+                logMessage('Camera stopped', false, true);
+            }
+        });
+        
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Deactivate all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show the selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Activate the clicked button
+            document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+        
+        // Advanced testing functions
+        document.getElementById('listCamerasBtn').addEventListener('click', async () => {
+            try {
+                logMessage('Listing available camera devices...');
+                
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    logMessage('ERROR: This browser does not support enumerateDevices()', true);
+                    return;
+                }
+                
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                if (videoDevices.length === 0) {
+                    logMessage('No camera devices found', true);
+                } else {
+                    logMessage(`Found ${videoDevices.length} camera devices:`, false, true);
+                    videoDevices.forEach((device, index) => {
+                        logMessage(`  ${index + 1}. ${device.label || 'Camera ' + (index + 1)}`);
+                    });
+                }
+            } catch (error) {
+                logMessage(`Error listing cameras: ${error.message}`, true);
+            }
+        });
+        
+        document.getElementById('advancedTestBtn').addEventListener('click', async () => {
+            try {
+                // Stop any existing stream
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                
+                const facingMode = document.getElementById('facingMode').value;
+                const resolution = document.getElementById('resolution').value;
+                
+                let width, height;
+                switch (resolution) {
+                    case 'low': width = 320; height = 240; break;
+                    case 'medium': width = 640; height = 480; break;
+                    case 'high': width = 1280; height = 720; break;
+                    default: width = 640; height = 480;
+                }
+                
+                logMessage(`Starting advanced test with facing mode: ${facingMode}, resolution: ${width}x${height}`);
+                
+                const constraints = {
+                    video: {
+                        facingMode: facingMode,
+                        width: { ideal: width },
+                        height: { ideal: height }
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                logMessage('Advanced camera test successful', false, true);
+                captureBtn.style.display = 'block';
+                stopBtn.style.display = 'block';
+                
+                try {
+                    await video.play();
+                    logMessage('Video playback started', false, true);
+                } catch (playError) {
+                    logMessage(`WARNING: Auto-play prevented: ${playError.message}`, true);
+                    manualStartBtn.style.display = 'block';
+                }
+            } catch (error) {
+                logMessage(`Error in advanced test: ${error.message}`, true);
+            }
+        });
+        
+        // Troubleshooting functions
+        function checkPermissions() {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'camera' })
+                    .then(permissionStatus => {
+                        logMessage(`Camera permission status: ${permissionStatus.state}`, false, true);
+                        
+                        if (permissionStatus.state === 'granted') {
+                            logMessage('You have granted camera access', false, true);
+                        } else if (permissionStatus.state === 'denied') {
+                            logMessage('You have blocked camera access. Please change this in your browser settings.', true);
+                        } else {
+                            logMessage('Camera permission is in prompt state. You will be asked when attempting to use it.');
+                        }
+                    })
+                    .catch(error => {
+                        logMessage(`Cannot query permission state: ${error.message}`, true);
+                    });
+            } else {
+                logMessage('This browser does not support permission queries', true);
+            }
+        }
+        
+        function resetCameraSettings() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            video.srcObject = null;
+            captureBtn.style.display = 'none';
+            stopBtn.style.display = 'none';
+            testBtn.disabled = false;
+            
+            logMessage('Camera settings reset. You can run the test again.');
+        }
+        
+        document.getElementById('fileUpload').addEventListener('change', event => {
+            const file = event.target.files[0];
+            if (file) {
+                logMessage(`File selected: ${file.name} (${file.type}, ${file.size} bytes)`);
+                
+                const reader = new FileReader();
+                reader.onload = e => {
+                    capturedImage.src = e.target.result;
+                    capturedImage.style.display = 'block';
+                    logMessage('File loaded successfully', false, true);
+                };
+                reader.onerror = () => {
+                    logMessage('Error reading file', true);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Run detection on page load
+        detectEnvironment();
+    </script>
+</body>
+</html>

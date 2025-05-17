@@ -34,6 +34,45 @@ export async function POST(request: NextRequest) {
         { error: "Member not found" },
         { status: 404 }
       );
+    }    // Check if the member has any uncollected books
+    const uncollectedBooks = await entityPrisma.issuedBook.findMany({
+      where: {
+        memberId: memberId,
+        entityId: entityId,
+        items: {
+          some: {
+            collected: false,
+          },
+        },
+      },
+      include: {
+        items: {
+          where: {
+            collected: false,
+          },
+          include: {
+            book: {
+              include: {
+                category: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Return uncollected books information for frontend usage
+    // Note: We're not blocking the API, as the frontend will handle this
+    // This serves as an additional validation that can be enabled if needed
+    if (uncollectedBooks.length > 0) {
+      // Uncomment to enforce the policy at the API level
+      // return NextResponse.json(
+      //   { 
+      //     error: "Member has uncollected books", 
+      //     uncollectedBooks 
+      //   },
+      //   { status: 400 }
+      // );
     }
 
     // Validate the books exist and have available copies

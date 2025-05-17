@@ -2,19 +2,20 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
 import { 
   ChevronDown, 
   Layout, 
   FileText, 
   LogOut,
-  UserCircle2,
   Boxes,
   PlusCircle,
   Users,
   Book,
-} from "lucide-react";
+  User,
+}from "lucide-react";
 
 type MenuItem = {
   title: string;
@@ -77,6 +78,7 @@ export function Sidebar() {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   // Handle click outside to close sidebar on mobile
   useEffect(() => {
@@ -92,6 +94,12 @@ export function Sidebar() {
 
   const toggleSubmenu = (title: string) => {
     setOpenSubmenu(openSubmenu === title ? null : title);
+  };
+
+  // Handle logout with direct redirect
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/");
   };
 
   return (
@@ -202,19 +210,22 @@ export function Sidebar() {
               </li>
             ))}
           </ul>
-        </nav>
-
-        {/* Footer */}
+        </nav>        {/* Footer */}
         <div className="border-t dark:border-gray-800 p-4 space-y-2">
           <Link
             href="/dashboard/profile"
-            className="flex items-center gap-3 p-2 rounded-md hover:bg-white/90 dark:hover:bg-white/20 transition-colors duration-200"
+            className={cn(
+              "flex items-center gap-3 p-2 rounded-md transition-colors duration-200",
+              pathname === "/dashboard/profile"
+                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100"
+                : "hover:bg-white/90 dark:hover:bg-white/20"
+            )}
           >
-            <UserCircle2 className="w-5 h-5" />
-            <span>Profile</span>
-          </Link>
+            <User className="w-5 h-5" />
+            <span>My Profile</span>          
+          </Link>          
           <button
-            onClick={() => {/* Add logout logic */}}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#FF0000]/20 transition-colors duration-200 text-red-600 dark:text-red-400"
           >
             <LogOut className="w-5 h-5" />

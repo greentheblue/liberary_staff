@@ -9,6 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 
 interface Member {
   id: string;
@@ -53,9 +61,11 @@ export default function Dashboard() {
   const [selectedBooks, setSelectedBooks] = useState<Book[]>([]);
   const [searchingBook, setSearchingBook] = useState(false);
   const [showIssueSection, setShowIssueSection] = useState(false);
-  const [issuingBooks, setIssuingBooks] = useState(false);  const [memberIssuedBooks, setMemberIssuedBooks] = useState<IssuedBook[]>([]);
+  const [issuingBooks, setIssuingBooks] = useState(false);
+  const [memberIssuedBooks, setMemberIssuedBooks] = useState<IssuedBook[]>([]);
   const [collectingBookId, setCollectingBookId] = useState<string | null>(null);
-
+  const [showUncollectedBooksDialog, setShowUncollectedBooksDialog] = useState(false);
+  const [checkingUncollectedBooks, setCheckingUncollectedBooks] = useState(false);
   const searchMember = async () => {
     if (!memberId) {
       toast.error("Please enter a member ID");
@@ -63,6 +73,11 @@ export default function Dashboard() {
     }
 
     setLoading(true);
+    // Reset states when searching for a new member
+    setMember(null);
+    setMemberIssuedBooks([]);
+    setShowIssueSection(false);
+    
     try {
       const response = await fetch(`/api/dashboard/members/${memberId}`);
       if (!response.ok) {
@@ -71,7 +86,15 @@ export default function Dashboard() {
 
       const data = await response.json();
       setMember(data.member);
-      setMemberIssuedBooks(data.issuedBooks || []);
+      
+      // Only set issued books if they exist and have items
+      if (data.issuedBooks && data.issuedBooks.length > 0) {
+        // Filter out any issued books with no items
+        const booksWithItems = data.issuedBooks.filter(
+          (book: IssuedBook) => book.items && book.items.length > 0
+        );
+        setMemberIssuedBooks(booksWithItems);
+      }
     } catch (error) {
       console.error("Error fetching member:", error);
       toast.error("Failed to find member");
@@ -119,10 +142,16 @@ export default function Dashboard() {
   const removeSelectedBook = (id: string) => {
     setSelectedBooks(selectedBooks.filter(book => book.id !== id));
   };
-
   const issueBooks = async () => {
     if (!member || selectedBooks.length === 0) {
       toast.error("Member and at least one book are required");
+      return;
+    }
+
+    // Double-check for uncollected books before proceeding
+    if (memberIssuedBooks.length > 0) {
+      // Show the warning dialog instead of proceeding
+      setShowUncollectedBooksDialog(true);
       return;
     }
 
@@ -141,6 +170,14 @@ export default function Dashboard() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Check if the error is due to uncollected books
+        if (errorData.uncollectedBooks) {
+          setMemberIssuedBooks(errorData.uncollectedBooks);
+          setShowUncollectedBooksDialog(true);
+          throw new Error("Member has uncollected books");
+        }
+        
         throw new Error(errorData.error || "Failed to issue books");
       }
 
@@ -162,8 +199,7 @@ export default function Dashboard() {
     } finally {
       setIssuingBooks(false);
     }
-  };
-  const markAsCollected = async (itemId: string) => {
+  };const markAsCollected = async (itemId: string) => {
     try {
       setCollectingBookId(itemId);
       const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
@@ -180,7 +216,6 @@ export default function Dashboard() {
         throw new Error("Failed to mark as collected");
       }
 
-      // const updatedItem = await response.json();
       toast.success("Book marked as collected");
       
       // Find the book that was marked as collected
@@ -207,6 +242,16 @@ export default function Dashboard() {
       }).filter(Boolean) as IssuedBook[];
       
       setMemberIssuedBooks(updatedIssuedBooks);
+      
+      // If all books are collected, close the dialog and allow issuing new books
+      if (updatedIssuedBooks.length === 0) {
+        setShowUncollectedBooksDialog(false);
+        
+        // If all books are collected, we can show the issue section
+        if (showUncollectedBooksDialog) {
+          setShowIssueSection(true);
+        }
+      }
       
       // Update book availability by incrementing by 1
       if (bookId) {
@@ -259,10 +304,39 @@ export default function Dashboard() {
   //     toast.error("Failed to return book");
   //   }
   // };
-
   const handleKeyPress = (event: React.KeyboardEvent, action: () => void) => {
     if (event.key === "Enter") {
       action();
+    }
+  };  const checkUncollectedBooks = () => {
+    if (!member) return;
+    
+    // If we're already showing the issue section, hide it
+    if (showIssueSection) {
+      setShowIssueSection(false);
+      return;
+    }
+    
+    setCheckingUncollectedBooks(true);
+    
+    try {
+      // Check if there are any uncollected books
+      const hasUncollectedBooks = memberIssuedBooks.some(issuedBook => 
+        issuedBook.items && issuedBook.items.length > 0
+      );
+      
+      if (hasUncollectedBooks) {
+        // Show the dialog
+        setShowUncollectedBooksDialog(true);
+      } else {
+        // Show the issue section directly if no uncollected books
+        setShowIssueSection(true);
+      }
+    } catch (error) {
+      console.error("Error checking uncollected books:", error);
+      toast.error("Failed to check uncollected books");
+    } finally {
+      setCheckingUncollectedBooks(false);
     }
   };
 
@@ -326,25 +400,34 @@ export default function Dashboard() {
                 {member.division && <p><span className="font-medium">Division:</span> {member.division}</p>}
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
+          </CardContent>          <CardFooter className="flex justify-between">
             <Button
               variant="outline"
-              onClick={() => setShowIssueSection(!showIssueSection)}
+              onClick={checkUncollectedBooks}
+              disabled={checkingUncollectedBooks}
+              className={memberIssuedBooks.length > 0 ? "relative" : ""}
             >
-              {showIssueSection ? "Hide Issue Section" : "Issue Books"}
+              {showIssueSection ? "Hide Issue Section" : checkingUncollectedBooks ? "Checking..." : "Issue Books"}
+              
+              {/* Add a visual indicator if member has uncollected books */}
+              {memberIssuedBooks.length > 0 && !showIssueSection && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse">
+                  <span className="sr-only">Uncollected books</span>
+                </div>
+              )}
             </Button>
           </CardFooter>
         </Card>
-      )}
-
-      {/* Currently Issued Books Section */}
+      )}      {/* Currently Issued Books Section */}
       {member && memberIssuedBooks.length > 0 && (
-        <Card className="mb-6">
+        <Card className="mb-6 border-red-200">
           <CardHeader>
-            <CardTitle>Currently Issued Books</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Currently Issued Books</CardTitle>
+              <Badge variant="destructive" className="animate-pulse">Uncollected</Badge>
+            </div>
             <CardDescription>
-              Books that have been issued to this member and not collected yet
+              These books have been issued to this member and must be collected before new books can be issued
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -467,7 +550,72 @@ export default function Dashboard() {
             </Button>
           </CardFooter>
         </Card>
-      )}
+      )}      {/* Dialog for uncollected books warning */}
+      <Dialog open={showUncollectedBooksDialog} onOpenChange={setShowUncollectedBooksDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">⚠️ Uncollected Books Warning</DialogTitle>
+            <DialogDescription>
+              This member has uncollected books. They must collect all previous books before new books can be issued.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4 p-3 border rounded-md bg-muted/50">
+            <h4 className="font-medium mb-2">Uncollected Books:</h4>
+            <ScrollArea className="h-[200px]">
+              {memberIssuedBooks.map((issuedBook) => (
+                <div key={issuedBook.id} className="mb-3">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Issued on: {new Date(issuedBook.issueDate).toLocaleDateString()}
+                  </p>
+                  <div className="space-y-2">
+                    {issuedBook.items.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center bg-muted/30 p-2 rounded-md">
+                        <div>
+                          <p className="font-medium text-sm">{item.book.title}</p>
+                          <p className="text-xs">{item.book.author}</p>
+                          <Badge variant="outline" className="mt-1 text-xs">{item.book.category.name}</Badge>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowUncollectedBooksDialog(false);
+                            markAsCollected(item.id);
+                          }}
+                          disabled={collectingBookId === item.id}
+                        >
+                          {collectingBookId === item.id ? "Marking..." : "Mark Collected"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowUncollectedBooksDialog(false)}
+            >
+              Close
+            </Button>
+            {/* <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setShowUncollectedBooksDialog(false);
+                setShowIssueSection(true);
+              }}
+            >
+              Issue Books Anyway
+            </Button> */}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!member && (
         <div className="text-center p-8 border rounded-lg bg-muted/50">

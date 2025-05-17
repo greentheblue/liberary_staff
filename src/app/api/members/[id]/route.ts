@@ -13,6 +13,7 @@ const memberSchema = z.object({
   address: z.string().min(1, "Address is required"),
   class: z.string().optional(),
   division: z.string().optional(),
+  profileImage: z.string().optional(),
 });
 
 interface RouteContext {
