@@ -170,11 +170,15 @@ export default function CameraCapture({
       const formData = new FormData();
       formData.append('image', blob, 'member-photo.jpg');
 
+      console.log("Uploading image to server...", process.env.PHP_PUBLIC_IMAGE_UPLOAD_URL);
+
       const uploadUrl = process.env.PHP_PUBLIC_IMAGE_UPLOAD_URL || '/api/upload-image';
       const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
+
+      console.log("Upload response:", uploadResponse);
 
       if (!uploadResponse.ok) {
         onImageCaptured(capturedImage);
