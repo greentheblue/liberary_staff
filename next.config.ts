@@ -6,9 +6,19 @@ const nextConfig: NextConfig = {
       {
         source: "/",
         destination: "/dashboard",
-        permanent: true, 
+        permanent: true,
       },
     ];
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "file.greentheblue.org",
+        port: "",
+        pathname: "/**",
+      },
+    ],
   },
 };
 
