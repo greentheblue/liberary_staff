@@ -87,27 +87,36 @@ export default function BooksPage() {
       });
     }
   };
-
   return (
-    <div className="container mx-auto p-4">      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl">Books Management</CardTitle>
-          <div className="space-x-2 flex flex-wrap gap-2 items-center">
-            <QRCodeGenerator books={books} />
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/books/categories">
-                Manage Categories
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/dashboard/books/add">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Book
-              </Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+    <div className="container mx-auto py-10 px-4 sm:px-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Books Management</h1>
+          <p className="text-muted-foreground mt-1">
+            View and manage all library books
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap gap-3 items-center">
+          <QRCodeGenerator books={books} />
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/books/categories">
+              Manage Categories
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/books/add" className="flex items-center">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Book
+            </Link>
+          </Button>
+        </div>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Book Inventory</CardTitle>
+        </CardHeader>        <CardContent>
           {loading ? (
             <div className="flex justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -120,48 +129,57 @@ export default function BooksPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Author</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Copies</TableHead>
-                  <TableHead>Available</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {books.map((book) => (
-                  <TableRow key={book.id}>
-                    <TableCell className="font-medium">{book.title}</TableCell>
-                    <TableCell>{book.author}</TableCell>
-                    <TableCell>{book.category.name}</TableCell>
-                    <TableCell>{book.copies}</TableCell>
-                    <TableCell>{book.availableCopies}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.push(`/dashboard/books/edit/${book.id}`)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(book.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="whitespace-nowrap">Copies</TableHead>
+                    <TableHead className="whitespace-nowrap">Available</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {books.map((book) => (
+                    <TableRow key={book.id}>
+                      <TableCell className="font-medium max-w-[150px] sm:max-w-[200px] md:max-w-none truncate" title={book.title}>
+                        {book.title}
+                      </TableCell>
+                      <TableCell className="max-w-[100px] sm:max-w-[150px] md:max-w-none truncate" title={book.author}>
+                        {book.author}
+                      </TableCell>
+                      <TableCell>{book.category.name}</TableCell>
+                      <TableCell>{book.copies}</TableCell>
+                      <TableCell>{book.availableCopies}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(`/dashboard/books/edit/${book.id}`)}
+                            title="Edit book"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(book.id)}
+                            title="Delete book"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </CardContent>      </Card>
     </div>
   );
 }

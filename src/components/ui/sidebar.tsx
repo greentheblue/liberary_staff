@@ -15,7 +15,17 @@ import {
   Users,
   Book,
   User,
+  AlertTriangle,
 }from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type MenuItem = {
   title: string;
@@ -74,8 +84,9 @@ const menuItems: MenuItem[] = [
 ];
 
 export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false); // Initialize to false to keep sidebar closed on load
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -96,10 +107,11 @@ export function Sidebar() {
     setOpenSubmenu(openSubmenu === title ? null : title);
   };
 
-  // Handle logout with direct redirect
+  // Handle logout with confirmation dialog
   const handleLogout = async () => {
     await signOut();
     router.push("/");
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -210,8 +222,7 @@ export function Sidebar() {
               </li>
             ))}
           </ul>
-        </nav>        {/* Footer */}
-        <div className="border-t dark:border-gray-800 p-4 space-y-2">
+        </nav>        {/* Footer */}        <div className="border-t dark:border-gray-800 p-4 space-y-2">
           <Link
             href="/dashboard/profile"
             className={cn(
@@ -220,12 +231,13 @@ export function Sidebar() {
                 ? "bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100"
                 : "hover:bg-white/90 dark:hover:bg-white/20"
             )}
+            onClick={() => setIsOpen(false)}
           >
             <User className="w-5 h-5" />
             <span>My Profile</span>          
           </Link>          
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-[#FF0000]/20 transition-colors duration-200 text-red-600 dark:text-red-400"
           >
             <LogOut className="w-5 h-5" />
@@ -233,6 +245,27 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to log out? Your session will end.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

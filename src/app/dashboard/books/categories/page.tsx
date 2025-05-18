@@ -164,29 +164,40 @@ export default function CategoriesPage() {
       });
     }
   };
-
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl">Book Categories</CardTitle>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/books">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Books
-            </Link>
-          </Button>
+    <div className="container mx-auto py-10 px-4 sm:px-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Book Categories</h1>
+          <p className="text-muted-foreground mt-1">
+            Create and manage book categories
+          </p>
+        </div>
+        
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/books" className="flex items-center">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Books
+          </Link>
+        </Button>
+      </div>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">
+            {editingCategory ? 'Update Category' : 'Add New Category'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                placeholder="Enter category name"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="submit">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+            <Input
+              placeholder="Enter category name"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              className="flex-1"
+            />
+            <div className="flex gap-2">
+              <Button type="submit" className="whitespace-nowrap">
                 {editingCategory ? 'Update' : 'Add'} Category
               </Button>
               {editingCategory && (
@@ -194,9 +205,16 @@ export default function CategoriesPage() {
                   Cancel
                 </Button>
               )}
-            </form>
-          </div>
-          
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Manage Categories</CardTitle>
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <div className="flex justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -206,37 +224,43 @@ export default function CategoriesPage() {
               <p className="text-lg text-muted-foreground">No categories found</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(category)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-full">Name</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(category)}
+                            title="Edit category"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(category.id)}
+                            title="Delete category"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
