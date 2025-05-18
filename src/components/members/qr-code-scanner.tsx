@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2 } from 'lucide-react';
+import {  Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 
 interface QRCodeScannerProps {
@@ -16,6 +16,7 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const [usingFrontCamera] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +44,6 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
       stopScanning();
     }
   }, [open]);
-
   const startScanning = async () => {
     setScanError(null);
     setIsScanning(true);
@@ -56,18 +56,18 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
         throw new Error("Camera API not supported in this browser");
       }
 
-      // First try with ideal environment camera
+      // Choose camera based on state
       try {
         stream.current = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: "environment" },
+            facingMode: usingFrontCamera ? "user" : { ideal: "environment" },
             width: { ideal: 1280 },
             height: { ideal: 720 }
           },
           audio: false
         });
       } catch (initialError) {
-        console.log('Failed with environment camera, trying any camera', initialError);
+        console.log('Failed with selected camera, trying any camera', initialError);
         // Fallback to any camera
         stream.current = await navigator.mediaDevices.getUserMedia({
           video: true,
