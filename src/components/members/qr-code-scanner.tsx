@@ -24,16 +24,16 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
   const isMounted = useRef(true);
 
   // Handle mobile device - use rear camera for mobile devices
-  const videoConstraints = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  ) ? { facingMode: { exact: "environment" } } : true;
-    useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      stopScanning();
-    };
-  }, []);
+//   const videoConstraints = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+//     typeof navigator !== 'undefined' ? navigator.userAgent : ''
+//   ) ? { facingMode: { exact: "environment" } } : true;
+//     useEffect(() => {
+//     isMounted.current = true;
+//     return () => {
+//       isMounted.current = false;
+//       stopScanning();
+//     };
+//   }, []);
   
   // Start camera when dialog opens
   useEffect(() => {
@@ -48,6 +48,8 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
     setScanError(null);
     setIsScanning(true);
     setScannedCode(null);
+
+    console.log('Starting camera for QR code scanning...', isScanning);
     
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
