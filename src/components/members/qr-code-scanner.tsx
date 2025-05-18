@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScanLine } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 
 interface QRCodeScannerProps {
@@ -15,8 +15,7 @@ interface QRCodeScannerProps {
 export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [lastDetectedCode, setLastDetectedCode] = useState<string | null>(null);
-  const [detectionCount, setDetectionCount] = useState(0);
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,23 +23,22 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
   const requestAnimationRef = useRef<number | null>(null);
   const isMounted = useRef(true);
 
-  // Handle mobile device
-  const facingMode = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+  // Handle mobile device - use rear camera for mobile devices
+  const videoConstraints = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  ) ? { facingMode: "environment" } : true;
-  
-  useEffect(() => {
+  ) ? { facingMode: { exact: "environment" } } : true;
+    useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
       stopScanning();
     };
   }, []);
+  
   // Start camera when dialog opens
   useEffect(() => {
     if (open) {
       startScanning();
-      console.log(isScanning);
     } else {
       stopScanning();
     }
@@ -49,21 +47,39 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
   const startScanning = async () => {
     setScanError(null);
     setIsScanning(true);
+    setScannedCode(null);
     
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera API not supported in this browser");
       }
 
-      stream.current = await navigator.mediaDevices.getUserMedia({
-        video: facingMode,
-        audio: false
-      });
+      // First try with ideal environment camera
+      try {
+        stream.current = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+      } catch (initialError) {
+        console.log('Failed with environment camera, trying any camera', initialError);
+        // Fallback to any camera
+        stream.current = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream.current;
-        videoRef.current.play();
-        detectQRCode();
+        await videoRef.current.play().catch(e => {
+          console.error('Error playing video:', e);
+          throw new Error("Failed to start video stream");
+        });
+        scanQRCode();
       }
     } catch (error) {
       console.error('Error starting camera:', error);
@@ -71,7 +87,6 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
       setIsScanning(false);
     }
   };
-
   const stopScanning = () => {
     if (requestAnimationRef.current) {
       cancelAnimationFrame(requestAnimationRef.current);
@@ -88,77 +103,81 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
     }
     
     setIsScanning(false);
-    setLastDetectedCode(null);
-    setDetectionCount(0);
   };
 
-  const detectQRCode = () => {
+  const scanQRCode = () => {
     if (!isMounted.current) return;
-    
-    // Request next animation frame
-    requestAnimationRef.current = requestAnimationFrame(detectQRCode);
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    if (!(video && canvas && video.readyState === video.HAVE_ENOUGH_DATA)) {
+    if (!video || !canvas) {
+      requestAnimationRef.current = requestAnimationFrame(scanQRCode);
       return;
     }
     
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // Only process the frame if the video has enough data and is actually playing
+    if (video.readyState !== video.HAVE_ENOUGH_DATA || video.paused || video.ended) {
+      requestAnimationRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
     
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      requestAnimationRef.current = requestAnimationFrame(scanQRCode);
+      return;
+    }
+    
+    // Set canvas size to match video dimensions
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
+    // Draw the current video frame to the canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "dontInvert",
-    });
-    
-    // If QR code is detected
-    if (code) {
-      // Only process if it's exactly 10 digits (member ID)
-      if (/^\d{10}$/.test(code.data)) {
-        // Require multiple consistent reads to prevent errors
-        if (lastDetectedCode === code.data) {
-          setDetectionCount(prev => prev + 1);
+    try {
+      // Get the image data for QR code detection
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Attempt to find a QR code in the image
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth", // Try both normal and inverted colors
+      });
+        // If a QR code is found
+      if (code) {
+        console.log("QR Code detected:", code.data);
+        
+        // Check if it matches the expected format (10 digit number)
+        if (/^\d{10}$/.test(code.data)) {
+          // Highlight the QR code on the canvas
+          ctx.beginPath();
+          ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
+          ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
+          ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
+          ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
+          ctx.lineTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "#00FF00";
+          ctx.stroke();
           
-          // If we detect the same code multiple times, we're confident it's correct
-          if (detectionCount >= 3) {
-            // Highlight the QR code
-            ctx.beginPath();
-            ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
-            ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
-            ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
-            ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
-            ctx.lineTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = "#00FF00";
-            ctx.stroke();
-            
-            // Stop scanning and use the code
-            if (requestAnimationRef.current) {
-              cancelAnimationFrame(requestAnimationRef.current);
-              requestAnimationRef.current = null;
-              
-              // Process the successful scan
-              onScan(code.data);
-              stopScanning();
-              onClose();
-            }
-          }
-        } else {
-          // Reset count when a different code is detected
-          setLastDetectedCode(code.data);
-          setDetectionCount(1);
+          // Set the scanned code state to trigger UI updates
+          setScannedCode(code.data);
+          
+          // Call the callback function with the scanned code immediately
+          onScan(code.data);
+          stopScanning();
+          onClose();
+          
+          return; // Stop scanning since we found a valid code
         }
       }
+    } catch (error) {
+      console.error("Error processing QR code:", error);
     }
+    
+    // Continue scanning if no valid QR code was found
+    requestAnimationRef.current = requestAnimationFrame(scanQRCode);
   };
-
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) onClose();
@@ -184,8 +203,7 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
               </Button>
             </div>
           ) : (
-            <>
-              <div className="relative w-full aspect-square max-w-[300px] mx-auto border-2 border-dashed rounded-md overflow-hidden">
+            <>                <div className="relative w-full aspect-square max-w-[300px] mx-auto border-2 border-primary/30 rounded-md overflow-hidden">
                 <video 
                   ref={videoRef} 
                   className="absolute top-0 left-0 w-full h-full object-cover"
@@ -193,10 +211,16 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
                   playsInline 
                   muted
                 />
-                <div className="absolute top-0 left-0 w-full h-full">
-                  <div className="absolute top-1/2 left-0 w-full h-1 bg-red-500 opacity-70 transform -translate-y-1/2 z-10">
-                    <ScanLine className="text-red-500 absolute right-0 top-1/2 transform -translate-y-1/2" />
-                  </div>
+                <div className={`absolute inset-0 pointer-events-none ${scannedCode ? 'border-4 border-green-500 rounded-sm' : ''}`}>
+                  {/* Targeting box for QR code alignment - only show corners when not scanning */}
+                  {!scannedCode && (
+                    <>
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-500/70"></div>
+                      <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-500/70"></div>
+                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-500/70"></div>
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-500/70"></div>
+                    </>
+                  )}
                 </div>
                 <canvas 
                   ref={canvasRef} 
@@ -204,8 +228,15 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
                 />
               </div>
               
-              <div className="animate-pulse mt-2 text-center text-sm text-muted-foreground">
-                Searching for QR code...
+              <div className="mt-4 text-center text-sm">
+                {!scannedCode ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Ready to scan QR code...</span>
+                  </div>
+                ) : (
+                  <span className="text-green-600 font-medium">QR code detected!</span>
+                )}
               </div>
             </>
           )}

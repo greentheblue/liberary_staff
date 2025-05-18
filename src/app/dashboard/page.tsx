@@ -3,19 +3,26 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import QRCodeScanner from "@/components/members/qr-code-scanner";
 import { ScanLine } from "lucide-react";
@@ -66,11 +73,15 @@ export default function Dashboard() {
   const [issuingBooks, setIssuingBooks] = useState(false);
   const [memberIssuedBooks, setMemberIssuedBooks] = useState<IssuedBook[]>([]);
   const [collectingBookId, setCollectingBookId] = useState<string | null>(null);
-  const [showUncollectedBooksDialog, setShowUncollectedBooksDialog] = useState(false);
-  const [checkingUncollectedBooks, setCheckingUncollectedBooks] = useState(false);
-  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-  const searchMember = async () => {
-    if (!memberId) {
+  const [showUncollectedBooksDialog, setShowUncollectedBooksDialog] =
+    useState(false);
+  const [checkingUncollectedBooks, setCheckingUncollectedBooks] =
+    useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);  const searchMember = async (forceId?: string) => {
+    // Use either the provided forceId or the memberId from state
+    const idToSearch = forceId || memberId;
+    
+    if (!idToSearch) {
       toast.error("Please enter a member ID");
       return;
     }
@@ -80,16 +91,18 @@ export default function Dashboard() {
     setMember(null);
     setMemberIssuedBooks([]);
     setShowIssueSection(false);
-    
+
+    console.log("Searching for member with ID:", idToSearch);
+
     try {
-      const response = await fetch(`/api/dashboard/members/${memberId}`);
+      const response = await fetch(`/api/dashboard/members/${idToSearch}`);
       if (!response.ok) {
         throw new Error("Member not found");
       }
 
       const data = await response.json();
       setMember(data.member);
-      
+
       // Only set issued books if they exist and have items
       if (data.issuedBooks && data.issuedBooks.length > 0) {
         // Filter out any issued books with no items
@@ -124,13 +137,13 @@ export default function Dashboard() {
       }
 
       const book = await response.json();
-      
+
       // Check if book is already added
-      if (selectedBooks.some(selectedBook => selectedBook.id === book.id)) {
+      if (selectedBooks.some((selectedBook) => selectedBook.id === book.id)) {
         toast.error("Book already added to the issue list");
         return;
       }
-      
+
       setSelectedBooks([...selectedBooks, book]);
       setBookId("");
       toast.success("Book added to the issue list");
@@ -143,7 +156,7 @@ export default function Dashboard() {
   };
 
   const removeSelectedBook = (id: string) => {
-    setSelectedBooks(selectedBooks.filter(book => book.id !== id));
+    setSelectedBooks(selectedBooks.filter((book) => book.id !== id));
   };
   const issueBooks = async () => {
     if (!member || selectedBooks.length === 0) {
@@ -167,30 +180,30 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           memberId: member.id,
-          bookIds: selectedBooks.map(book => book.id),
+          bookIds: selectedBooks.map((book) => book.id),
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Check if the error is due to uncollected books
         if (errorData.uncollectedBooks) {
           setMemberIssuedBooks(errorData.uncollectedBooks);
           setShowUncollectedBooksDialog(true);
           throw new Error("Member has uncollected books");
         }
-        
+
         throw new Error(errorData.error || "Failed to issue books");
       }
 
       const issuedBookData = await response.json();
       toast.success("Books issued successfully");
-      
+
       // Clear the selected books and refresh member's books
       setSelectedBooks([]);
       setShowIssueSection(false);
-      
+
       // Add the newly issued book to the list
       setMemberIssuedBooks([issuedBookData, ...memberIssuedBooks]);
     } catch (error) {
@@ -202,7 +215,8 @@ export default function Dashboard() {
     } finally {
       setIssuingBooks(false);
     }
-  };const markAsCollected = async (itemId: string) => {
+  };
+  const markAsCollected = async (itemId: string) => {
     try {
       setCollectingBookId(itemId);
       const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
@@ -220,42 +234,46 @@ export default function Dashboard() {
       }
 
       toast.success("Book marked as collected");
-      
+
       // Find the book that was marked as collected
       let bookId = "";
-      memberIssuedBooks.forEach(issuedBook => {
-        issuedBook.items.forEach(item => {
+      memberIssuedBooks.forEach((issuedBook) => {
+        issuedBook.items.forEach((item) => {
           if (item.id === itemId) {
             bookId = item.bookId;
           }
         });
       });
-      
+
       // Update the local state
-      const updatedIssuedBooks = memberIssuedBooks.map(issuedBook => {
-        const updatedItems = issuedBook.items.filter(item => item.id !== itemId);
-        // If no more uncollected items, remove the whole issue
-        if (updatedItems.length === 0) {
-          return null;
-        }
-        return {
-          ...issuedBook,
-          items: updatedItems
-        };
-      }).filter(Boolean) as IssuedBook[];
-      
+      const updatedIssuedBooks = memberIssuedBooks
+        .map((issuedBook) => {
+          const updatedItems = issuedBook.items.filter(
+            (item) => item.id !== itemId
+          );
+          // If no more uncollected items, remove the whole issue
+          if (updatedItems.length === 0) {
+            return null;
+          }
+          return {
+            ...issuedBook,
+            items: updatedItems,
+          };
+        })
+        .filter(Boolean) as IssuedBook[];
+
       setMemberIssuedBooks(updatedIssuedBooks);
-      
+
       // If all books are collected, close the dialog and allow issuing new books
       if (updatedIssuedBooks.length === 0) {
         setShowUncollectedBooksDialog(false);
-        
+
         // If all books are collected, we can show the issue section
         if (showUncollectedBooksDialog) {
           setShowIssueSection(true);
         }
       }
-      
+
       // Update book availability by incrementing by 1
       if (bookId) {
         await fetch(`/api/dashboard/books/${bookId}`, {
@@ -264,7 +282,7 @@ export default function Dashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            incrementAvailableCopies: 1
+            incrementAvailableCopies: 1,
           }),
         });
       }
@@ -280,32 +298,32 @@ export default function Dashboard() {
       action();
     }
   };
-  const handleQRCodeScan = (scannedCode: string) => {
+  const handleQRCodeScan = async (scannedCode: string) => {
     // The QR code scanner component already validates that it's a 10-digit number
     setMemberId(scannedCode);
     toast.success(`QR code scanned: ${scannedCode}`);
-    
-    // Automatically search for the member after scanning
-    setTimeout(() => {
-      searchMember();
-    }, 500);
-  };const checkUncollectedBooks = () => {
+
+    // Pass the scanned code directly to searchMember to avoid state timing issues
+    searchMember(scannedCode);
+  };
+
+  const checkUncollectedBooks = () => {
     if (!member) return;
-    
+
     // If we're already showing the issue section, hide it
     if (showIssueSection) {
       setShowIssueSection(false);
       return;
     }
-    
+
     setCheckingUncollectedBooks(true);
-    
+
     try {
       // Check if there are any uncollected books
-      const hasUncollectedBooks = memberIssuedBooks.some(issuedBook => 
-        issuedBook.items && issuedBook.items.length > 0
+      const hasUncollectedBooks = memberIssuedBooks.some(
+        (issuedBook) => issuedBook.items && issuedBook.items.length > 0
       );
-      
+
       if (hasUncollectedBooks) {
         // Show the dialog
         setShowUncollectedBooksDialog(true);
@@ -324,7 +342,6 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-      
       {/* Member Search Section */}
       <Card className="mb-6">
         <CardHeader>
@@ -332,7 +349,8 @@ export default function Dashboard() {
           <CardDescription>
             Enter a member ID to search for a member and issue books
           </CardDescription>
-        </CardHeader>        <CardContent>
+        </CardHeader>{" "}
+        <CardContent>
           <div className="flex flex-col sm:flex-row items-end gap-4">
             <div className="flex-1">
               <Label htmlFor="memberId" className="mb-2 block">
@@ -342,21 +360,20 @@ export default function Dashboard() {
                 id="memberId"
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
-                onKeyDown={(e) => handleKeyPress(e, searchMember)}
+                onKeyDown={(e) => handleKeyPress(e, () => searchMember())}
                 placeholder="Enter member ID"
               />
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setIsQRScannerOpen(true)}
                 className="flex-1 sm:flex-none"
               >
                 <ScanLine className="h-4 w-4 mr-2" />
                 Scan QR
-              </Button>
-              <Button 
-                onClick={searchMember}
+              </Button>              <Button
+                onClick={() => searchMember()}
                 disabled={loading}
                 className="flex-1 sm:flex-none"
               >
@@ -366,7 +383,6 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-
       {/* Member Details Section */}
       {member && (
         <Card className="mb-6">
@@ -379,27 +395,55 @@ export default function Dashboard() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p><span className="font-medium">ID:</span> {member.id}</p>
-                <p><span className="font-medium">Name:</span> {member.name}</p>
-                <p><span className="font-medium">Member Type:</span> {member.memberType}</p>
-                <p><span className="font-medium">Gender:</span> {member.gender}</p>
+                <p>
+                  <span className="font-medium">ID:</span> {member.id}
+                </p>
+                <p>
+                  <span className="font-medium">Name:</span> {member.name}
+                </p>
+                <p>
+                  <span className="font-medium">Member Type:</span>{" "}
+                  {member.memberType}
+                </p>
+                <p>
+                  <span className="font-medium">Gender:</span> {member.gender}
+                </p>
               </div>
               <div>
-                <p><span className="font-medium">Phone:</span> {member.phoneNumber}</p>
-                <p><span className="font-medium">Address:</span> {member.address}</p>
-                {member.class && <p><span className="font-medium">Class:</span> {member.class}</p>}
-                {member.division && <p><span className="font-medium">Division:</span> {member.division}</p>}
+                <p>
+                  <span className="font-medium">Phone:</span>{" "}
+                  {member.phoneNumber}
+                </p>
+                <p>
+                  <span className="font-medium">Address:</span> {member.address}
+                </p>
+                {member.class && (
+                  <p>
+                    <span className="font-medium">Class:</span> {member.class}
+                  </p>
+                )}
+                {member.division && (
+                  <p>
+                    <span className="font-medium">Division:</span>{" "}
+                    {member.division}
+                  </p>
+                )}
               </div>
             </div>
-          </CardContent>          <CardFooter className="flex justify-between">
+          </CardContent>{" "}
+          <CardFooter className="flex justify-between">
             <Button
               variant="outline"
               onClick={checkUncollectedBooks}
               disabled={checkingUncollectedBooks}
               className={memberIssuedBooks.length > 0 ? "relative" : ""}
             >
-              {showIssueSection ? "Hide Issue Section" : checkingUncollectedBooks ? "Checking..." : "Issue Books"}
-              
+              {showIssueSection
+                ? "Hide Issue Section"
+                : checkingUncollectedBooks
+                ? "Checking..."
+                : "Issue Books"}
+
               {/* Add a visual indicator if member has uncollected books */}
               {memberIssuedBooks.length > 0 && !showIssueSection && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse">
@@ -409,16 +453,20 @@ export default function Dashboard() {
             </Button>
           </CardFooter>
         </Card>
-      )}      {/* Currently Issued Books Section */}
+      )}{" "}
+      {/* Currently Issued Books Section */}
       {member && memberIssuedBooks.length > 0 && (
         <Card className="mb-6 border-red-200">
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle>Currently Issued Books</CardTitle>
-              <Badge variant="destructive" className="animate-pulse">Uncollected</Badge>
+              <Badge variant="destructive" className="animate-pulse">
+                Uncollected
+              </Badge>
             </div>
             <CardDescription>
-              These books have been issued to this member and must be collected before new books can be issued
+              These books have been issued to this member and must be collected
+              before new books can be issued
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -427,7 +475,8 @@ export default function Dashboard() {
                 <div key={issuedBook.id} className="mb-4 p-3 border rounded-md">
                   <div className="mb-2">
                     <p className="text-sm text-muted-foreground">
-                      Issued on: {new Date(issuedBook.issueDate).toLocaleDateString()}
+                      Issued on:{" "}
+                      {new Date(issuedBook.issueDate).toLocaleDateString()}
                     </p>
                     <p className="text-sm font-medium">
                       Issue ID: {issuedBook.id}
@@ -436,11 +485,16 @@ export default function Dashboard() {
                   <Separator className="my-2" />
                   <div className="space-y-2">
                     {issuedBook.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center bg-muted/20 p-2 rounded-md">
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center bg-muted/20 p-2 rounded-md"
+                      >
                         <div>
                           <p className="font-medium">{item.book.title}</p>
                           <p className="text-sm">{item.book.author}</p>
-                          <Badge variant="outline" className="mt-1">{item.book.category.name}</Badge>
+                          <Badge variant="outline" className="mt-1">
+                            {item.book.category.name}
+                          </Badge>
                         </div>
                         <div className="flex gap-2">
                           <Button
@@ -448,7 +502,9 @@ export default function Dashboard() {
                             onClick={() => markAsCollected(item.id)}
                             disabled={collectingBookId === item.id}
                           >
-                            {collectingBookId === item.id ? "Marking..." : "Mark as Collected"}
+                            {collectingBookId === item.id
+                              ? "Marking..."
+                              : "Mark as Collected"}
                           </Button>
                           {/* <Button
                             size="sm"
@@ -467,7 +523,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
-
       {/* Book Issue Section */}
       {member && showIssueSection && (
         <Card className="mb-6">
@@ -492,10 +547,7 @@ export default function Dashboard() {
                     placeholder="Enter book ID"
                   />
                 </div>
-                <Button 
-                  onClick={searchBook}
-                  disabled={searchingBook}
-                >
+                <Button onClick={searchBook} disabled={searchingBook}>
                   {searchingBook ? "Searching..." : "Search"}
                 </Button>
               </div>
@@ -505,7 +557,7 @@ export default function Dashboard() {
                   <h3 className="font-medium mb-2">Selected Books</h3>
                   <ScrollArea className="h-[200px] rounded-md border p-4">
                     {selectedBooks.map((book) => (
-                      <div 
+                      <div
                         key={book.id}
                         className="flex justify-between items-center mb-2 p-2 border rounded-md"
                       >
@@ -513,12 +565,16 @@ export default function Dashboard() {
                           <p className="font-medium">{book.title}</p>
                           <p className="text-sm">{book.author}</p>
                           <div className="flex gap-2 mt-1">
-                            <Badge variant="outline">{book.category.name}</Badge>
-                            <Badge variant="secondary">Available: {book.availableCopies}</Badge>
+                            <Badge variant="outline">
+                              {book.category.name}
+                            </Badge>
+                            <Badge variant="secondary">
+                              Available: {book.availableCopies}
+                            </Badge>
                           </div>
                         </div>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           size="sm"
                           onClick={() => removeSelectedBook(book.id)}
                         >
@@ -532,40 +588,59 @@ export default function Dashboard() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
+            <Button
               disabled={selectedBooks.length === 0 || issuingBooks}
               onClick={issueBooks}
               className="w-full"
             >
-              {issuingBooks ? "Issuing Books..." : `Issue ${selectedBooks.length} Book${selectedBooks.length !== 1 ? 's' : ''}`}
+              {issuingBooks
+                ? "Issuing Books..."
+                : `Issue ${selectedBooks.length} Book${
+                    selectedBooks.length !== 1 ? "s" : ""
+                  }`}
             </Button>
           </CardFooter>
         </Card>
-      )}      {/* Dialog for uncollected books warning */}
-      <Dialog open={showUncollectedBooksDialog} onOpenChange={setShowUncollectedBooksDialog}>
+      )}{" "}
+      {/* Dialog for uncollected books warning */}
+      <Dialog
+        open={showUncollectedBooksDialog}
+        onOpenChange={setShowUncollectedBooksDialog}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-red-500">⚠️ Uncollected Books Warning</DialogTitle>
+            <DialogTitle className="text-red-500">
+              ⚠️ Uncollected Books Warning
+            </DialogTitle>
             <DialogDescription>
-              This member has uncollected books. They must collect all previous books before new books can be issued.
+              This member has uncollected books. They must collect all previous
+              books before new books can be issued.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="mt-4 p-3 border rounded-md bg-muted/50">
             <h4 className="font-medium mb-2">Uncollected Books:</h4>
             <ScrollArea className="h-[200px]">
               {memberIssuedBooks.map((issuedBook) => (
                 <div key={issuedBook.id} className="mb-3">
                   <p className="text-xs text-muted-foreground mb-1">
-                    Issued on: {new Date(issuedBook.issueDate).toLocaleDateString()}
+                    Issued on:{" "}
+                    {new Date(issuedBook.issueDate).toLocaleDateString()}
                   </p>
                   <div className="space-y-2">
                     {issuedBook.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center bg-muted/30 p-2 rounded-md">
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center bg-muted/30 p-2 rounded-md"
+                      >
                         <div>
-                          <p className="font-medium text-sm">{item.book.title}</p>
+                          <p className="font-medium text-sm">
+                            {item.book.title}
+                          </p>
                           <p className="text-xs">{item.book.author}</p>
-                          <Badge variant="outline" className="mt-1 text-xs">{item.book.category.name}</Badge>
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {item.book.category.name}
+                          </Badge>
                         </div>
                         <Button
                           size="sm"
@@ -576,7 +651,9 @@ export default function Dashboard() {
                           }}
                           disabled={collectingBookId === item.id}
                         >
-                          {collectingBookId === item.id ? "Marking..." : "Mark Collected"}
+                          {collectingBookId === item.id
+                            ? "Marking..."
+                            : "Mark Collected"}
                         </Button>
                       </div>
                     ))}
@@ -585,7 +662,7 @@ export default function Dashboard() {
               ))}
             </ScrollArea>
           </div>
-          
+
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button
               type="button"
@@ -596,7 +673,8 @@ export default function Dashboard() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>      {!member && (
+      </Dialog>{" "}
+      {!member && (
         <div className="text-center p-8 border rounded-lg bg-muted/50">
           <h3 className="font-medium mb-2">Search for a member to begin</h3>
           <p className="text-sm text-muted-foreground">
@@ -604,9 +682,8 @@ export default function Dashboard() {
           </p>
         </div>
       )}
-
       {/* QR Code Scanner Dialog */}
-      <QRCodeScanner 
+      <QRCodeScanner
         open={isQRScannerOpen}
         onClose={() => setIsQRScannerOpen(false)}
         onScan={handleQRCodeScan}
