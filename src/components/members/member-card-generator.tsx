@@ -119,7 +119,7 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
               resolve();
             };
             
-            img.onerror = (e) => {
+            img.onerror = () => {
               clearTimeout(timeout);
               reject(new Error('Failed to load image'));
             };
