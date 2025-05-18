@@ -133,9 +133,6 @@ export default function QRCodeGenerator({ books }: QRCodeGeneratorProps) {
       for (let i = 0; i < books.length; i++) {
         const book = books[i];
         
-        // Calculate which page this box belongs to
-        const pageIndex = Math.floor(i / boxesPerPage);
-        
         // Add a new page if needed
         if (i > 0 && i % boxesPerPage === 0) {
           doc.addPage();
