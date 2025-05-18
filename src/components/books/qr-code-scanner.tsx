@@ -3,16 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {  Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 
-interface QRCodeScannerProps {
+interface BookQRCodeScannerProps {
   open: boolean;
   onClose: () => void;
   onScan: (scannedCode: string) => void;
 }
 
-export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerProps) {
+export default function BookQRCodeScanner({ open, onClose, onScan }: BookQRCodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
@@ -32,12 +32,13 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
       stopScanning();
     }
   }, [open]);
+  
   const startScanning = async () => {
     setScanError(null);
     setIsScanning(true);
     setScannedCode(null);
 
-    console.log('Starting camera for QR code scanning...', isScanning);
+    console.log('Starting camera for book QR code scanning...', isScanning);
     
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -77,6 +78,7 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
       setIsScanning(false);
     }
   };
+  
   const stopScanning = () => {
     if (requestAnimationRef.current) {
       cancelAnimationFrame(requestAnimationRef.current);
@@ -133,12 +135,13 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "attemptBoth", // Try both normal and inverted colors
       });
-        // If a QR code is found
+      
+      // If a QR code is found
       if (code) {
-        console.log("QR Code detected:", code.data);
+        console.log("Book QR Code detected:", code.data);
         
-        // Check if it matches the expected format (10 digit number)
-        if (/^\d{10}$/.test(code.data)) {
+        // Check if it matches the expected format (5 digit number)
+        if (/^\d{5}$/.test(code.data)) {
           // Highlight the QR code on the canvas
           ctx.beginPath();
           ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
@@ -168,15 +171,16 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
     // Continue scanning if no valid QR code was found
     requestAnimationRef.current = requestAnimationFrame(scanQRCode);
   };
+  
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) onClose();
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Scan Member QR Code</DialogTitle>
+          <DialogTitle>Scan Book QR Code</DialogTitle>
           <DialogDescription>
-            Position the QR code within the camera view
+            Position the book QR code within the camera view
           </DialogDescription>
         </DialogHeader>
         
@@ -193,7 +197,8 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
               </Button>
             </div>
           ) : (
-            <>                <div className="relative w-full aspect-square max-w-[300px] mx-auto border-2 border-primary/30 rounded-md overflow-hidden">
+            <>                
+              <div className="relative w-full aspect-square max-w-[300px] mx-auto border-2 border-primary/30 rounded-md overflow-hidden">
                 <video 
                   ref={videoRef} 
                   className="absolute top-0 left-0 w-full h-full object-cover"
@@ -222,10 +227,10 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
                 {!scannedCode ? (
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Ready to scan QR code...</span>
+                    <span>Ready to scan book QR code (5 digits)...</span>
                   </div>
                 ) : (
-                  <span className="text-green-600 font-medium">QR code detected!</span>
+                  <span className="text-green-600 font-medium">Book QR code detected!</span>
                 )}
               </div>
             </>

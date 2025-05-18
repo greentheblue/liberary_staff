@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import QRCodeScanner from "@/components/members/qr-code-scanner";
+import BookQRCodeScanner from "@/components/books/qr-code-scanner";
 import { ScanLine, Phone, MapPin, User, School, CalendarDays, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -37,7 +38,9 @@ interface Member {
   address: string;
   class?: string;
   division?: string;
-  profilePic?: string;
+  profileImage?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Book {
@@ -79,7 +82,10 @@ export default function Dashboard() {
     useState(false);
   const [checkingUncollectedBooks, setCheckingUncollectedBooks] =
     useState(false);
-  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);  const searchMember = async (forceId?: string) => {
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [isBookQRScannerOpen, setIsBookQRScannerOpen] = useState(false);  
+
+  const searchMember = async (forceId?: string) => {
     // Use either the provided forceId or the memberId from state
     const idToSearch = forceId || memberId;
     
@@ -103,6 +109,7 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
+      console.log("Member data:", data);
       setMember(data.member);
 
       // Only set issued books if they exist and have items
@@ -299,14 +306,46 @@ export default function Dashboard() {
     if (event.key === "Enter") {
       action();
     }
-  };
-  const handleQRCodeScan = async (scannedCode: string) => {
+  };  const handleQRCodeScan = async (scannedCode: string) => {
     // The QR code scanner component already validates that it's a 10-digit number
     setMemberId(scannedCode);
     toast.success(`QR code scanned: ${scannedCode}`);
 
     // Pass the scanned code directly to searchMember to avoid state timing issues
     searchMember(scannedCode);
+  };
+  const handleBookQRCodeScan = async (scannedCode: string) => {
+    // The book QR code scanner component already validates that it's a 5-digit number
+    setBookId(scannedCode);
+    toast.success(`Book QR code scanned: ${scannedCode}`);
+
+    // Search for the book with the scanned code
+    setSearchingBook(true);
+    try {
+      const response = await fetch(`/api/dashboard/books/${scannedCode}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Book not found");
+        return;
+      }
+
+      const book = await response.json();
+
+      // Check if book is already added
+      if (selectedBooks.some((selectedBook) => selectedBook.id === book.id)) {
+        toast.error("Book already added to the issue list");
+        return;
+      }
+
+      setSelectedBooks([...selectedBooks, book]);
+      setBookId("");
+      toast.success("Book added to the issue list");
+    } catch (error) {
+      console.error("Error fetching book:", error);
+      toast.error("Book not found");
+    } finally {
+      setSearchingBook(false);
+    }
   };
 
   const checkUncollectedBooks = () => {
@@ -387,12 +426,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>      {/* Member Details Section */}
       {member && (
-        <Card className="mb-6">
-          <CardHeader className="pb-2 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <Card className="mb-6">          <CardHeader className="pb-2 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-blue-100 dark:border-blue-900/50">
-              {member.profilePic ? (
+              {member.profileImage ? (
                 <AvatarImage 
-                  src={member.profilePic} 
+                  src={member.profileImage} 
                   alt={member.name} 
                   className="object-cover"
                 />
@@ -572,8 +610,7 @@ export default function Dashboard() {
           </div>
           <CardContent className="p-4 pt-6">
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">                <div className="flex-1">
                   <Label htmlFor="bookId" className="mb-2 block">
                     Book ID
                   </Label>
@@ -586,20 +623,30 @@ export default function Dashboard() {
                     className="w-full"
                   />
                 </div>
-                <Button 
-                  onClick={searchBook} 
-                  disabled={searchingBook}
-                  className="w-full sm:w-auto mt-2 sm:mt-0"
-                >
-                  {searchingBook ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Searching...
-                    </>
-                  ) : (
-                    "Search"
-                  )}
-                </Button>
+                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsBookQRScannerOpen(true)}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <ScanLine className="h-4 w-4 mr-2" />
+                    Scan Book
+                  </Button>
+                  <Button 
+                    onClick={searchBook} 
+                    disabled={searchingBook}
+                    className="flex-1 sm:flex-none"
+                  >
+                    {searchingBook ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      "Search"
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {selectedBooks.length > 0 && (
@@ -771,12 +818,18 @@ export default function Dashboard() {
             Enter a member ID above or use the QR scanner to search for a member and issue books
           </p>
         </div>
-      )}
-      {/* QR Code Scanner Dialog */}
+      )}      {/* QR Code Scanner Dialog */}
       <QRCodeScanner
         open={isQRScannerOpen}
         onClose={() => setIsQRScannerOpen(false)}
         onScan={handleQRCodeScan}
+      />
+
+      {/* Book QR Code Scanner Dialog */}
+      <BookQRCodeScanner
+        open={isBookQRScannerOpen}
+        onClose={() => setIsBookQRScannerOpen(false)}
+        onScan={handleBookQRCodeScan}
       />
     </div>
   );

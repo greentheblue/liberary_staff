@@ -64,7 +64,7 @@ model Staff {
 model Member {
   id          String       @id
   name        String
-  profilePic  String?
+  profileImage  String?
   memberType  MemberType
   gender      Gender
   phoneNumber String

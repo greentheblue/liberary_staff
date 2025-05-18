@@ -31,11 +31,11 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
       if (!entityResponse.ok) {
         throw new Error('Failed to fetch entity data');
       }
-      const entityData = await entityResponse.json();        // Create PDF document (ID Card size - Portrait orientation)
+      const entityData = await entityResponse.json();      // Create PDF document (ID Card size - Portrait orientation)
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [85, 105] // Further reduced height to ensure proper fit
+        format: [85, 105] // ID card size
       });
       
       // Set background color with gradient effect
@@ -43,7 +43,8 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         startColor: [240, 249, 255],
         endColor: [230, 244, 255]
       };
-        // Create gradient-like background manually
+      
+      // Create gradient-like background manually
       for (let i = 0; i < 105; i++) {
         const ratio = i / 105;
         const r = Math.floor(gradient.startColor[0] * (1 - ratio) + gradient.endColor[0] * ratio);
@@ -51,8 +52,7 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         const b = Math.floor(gradient.startColor[2] * (1 - ratio) + gradient.endColor[2] * ratio);
         doc.setFillColor(r, g, b);
         doc.rect(0, i, 85, 1, 'F');
-      }
-        // Add decorative border with rounded corners
+      }      // Add decorative border with rounded corners
       doc.setDrawColor(51, 153, 255);
       doc.setLineWidth(0.8);
       doc.roundedRect(1, 1, 83, 103, 4, 4, 'S');
@@ -62,8 +62,7 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         startColor: [51, 153, 255],
         endColor: [51, 103, 205]
       };
-      
-      // Create header gradient manually
+        // Create header gradient manually
       for (let i = 0; i < 16; i++) {
         const ratio = i / 16;
         const r = Math.floor(headerGradient.startColor[0] * (1 - ratio) + headerGradient.endColor[0] * ratio);
@@ -73,93 +72,16 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         doc.rect(0, i, 85, 1, 'F');
       }
       
-      // Add entity name in header
+      // Add entity name in header (small text)
       doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text('LIBRARY CARD', 42.5, 5, { align: 'center' });
+
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('LIBRARY CARD', 42.5, 7, { align: 'center' });
+      doc.setFontSize(15);
+      doc.text(entityData.name.toUpperCase(), 42.5, 13, { align: 'center' });
       
-      doc.setFontSize(12);
-      doc.text(entityData.name.toUpperCase(), 42.5, 12, { align: 'center' });
-      
-      // Title with subtle background
-      doc.setFillColor(235, 245, 255);
-      doc.rect(10, 20, 65, 12, 'F');
-      doc.setDrawColor(200, 220, 240);
-      doc.rect(10, 20, 65, 12, 'S');
-      
-      doc.setTextColor(51, 51, 153);
-      doc.setFontSize(14);
-      doc.text('MEMBER CARD', 42.5, 28, { align: 'center' });      // Start the member info section closer to the title (no avatar circle)
-      const startY = 34; // Further reduced starting position
-      const rowHeight = 6; // Minimized row height
-      const rowSpacing = 0.5; // Minimized spacing between rows
-      
-      // Add member information with alternating colored sections
-      let currentY = startY;
-      
-      // Name field
-      doc.setFillColor(235, 240, 255);
-      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
-      
-      doc.setFontSize(9);
-      doc.setTextColor(50, 70, 150);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Name:', 10, currentY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);
-      doc.text(memberData.name, 75, currentY + 5, { align: 'right' });
-      
-      // Member ID field
-      currentY += rowHeight + rowSpacing;
-      doc.setFillColor(245, 248, 255);
-      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
-      
-      doc.setTextColor(50, 70, 150);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Member ID:', 10, currentY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);
-      doc.text(memberData.id, 75, currentY + 5, { align: 'right' });
-      
-      // Type field
-      currentY += rowHeight + rowSpacing;
-      doc.setFillColor(235, 240, 255);
-      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
-      
-      doc.setTextColor(50, 70, 150);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Type:', 10, currentY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);
-      doc.text(formatMemberType(memberData.memberType), 75, currentY + 5, { align: 'right' });
-      
-      // Phone field
-      currentY += rowHeight + rowSpacing;
-      doc.setFillColor(245, 248, 255);
-      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
-      
-      doc.setTextColor(50, 70, 150);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Phone:', 10, currentY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);
-      doc.text(memberData.phoneNumber, 75, currentY + 5, { align: 'right' });
-      
-      // Class field (if applicable)
-      if (memberData.class) {
-        currentY += rowHeight + rowSpacing;
-        doc.setFillColor(235, 240, 255);
-        doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
-        
-        doc.setTextColor(50, 70, 150);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Class:', 10, currentY + 5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        doc.text(`${memberData.class}${memberData.division ? ' - ' + memberData.division : ''}`, 75, currentY + 5, { align: 'right' });
-      }
-        // Generate QR code with member ID
+      // Generate QR code with member ID
       const qrCodeDataURL = await QRCode.toDataURL(memberData.id, {
         margin: 1,
         width: 150,
@@ -169,35 +91,178 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         }
       });
       
-      // Add QR code to PDF with border and shadow effect
-      currentY += rowHeight + 3;
-      const qrSize = 26; // Slightly reduced QR size
-      
-      // Ensure QR code is fully visible
-      if (currentY + qrSize + 5 > 105) {
-        currentY = 100 - qrSize - 5; // Make sure QR code fits within card
+      const startY = 33; // Increased starting position after header to move content down
+
+      // Add profile image on left side if available
+      if (memberData.profileImage) {
+        try {
+          // Fetch the profile image
+          const imageResponse = await fetch(memberData.profileImage);
+          const imageBlob = await imageResponse.blob();
+          const imageUrl = URL.createObjectURL(imageBlob);
+          
+          // Convert the image to base64 for jspdf
+          const img = new Image();
+          img.src = imageUrl;
+          
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+              // Add circular mask for profile image
+            const imageSize = 24; // Increased size of profile image
+              // Add white background circle with shadow for profile image
+            doc.setFillColor(230, 230, 230);
+            doc.circle(20, startY, imageSize/2 + 0.5, 'F');
+            doc.setFillColor(255, 255, 255);
+            doc.circle(19.5, startY - 0.5, imageSize/2 + 0.5, 'F');
+            
+            // Add the profile image
+            doc.addImage(imageDataUrl, 'JPEG', 7.5, startY - 12, imageSize, imageSize);
+            
+            // Add circle border
+            doc.setDrawColor(51, 153, 255);
+            doc.setLineWidth(0.5);
+            doc.circle(19.5, startY - 0.5, imageSize/2 + 0.5, 'S');
+            
+            // Clean up object URL
+            URL.revokeObjectURL(imageUrl);
+          }
+        } catch (error) {
+          console.error('Error adding profile image:', error);
+        }
+      } else {        // Draw avatar circle with member initials if no profile image
+        const imageSize = 24; // Increased size
+        doc.setFillColor(51, 103, 205);
+        doc.circle(19.5, startY - 0.5, imageSize/2, 'F');
+        
+        // Add initials inside circle
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14); // Increased font size
+        doc.text(memberData.name.charAt(0).toUpperCase(), 19.5, startY + 1, { align: 'center' });
       }
-      
-      // QR code white background with shadow effect
-      doc.setFillColor(230, 230, 230);
-      doc.roundedRect((85 - qrSize) / 2 + 1, currentY + 1, qrSize, qrSize, 2, 2, 'F');
+        // Add QR code to the right
+      const qrSize = 26; // Increased QR size
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect((85 - qrSize) / 2, currentY, qrSize, qrSize, 2, 2, 'F');
+      doc.roundedRect(45, startY - 13, qrSize, qrSize, 2, 2, 'F');
+      doc.setDrawColor(200, 220, 240);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(45, startY - 13, qrSize, qrSize, 2, 2, 'S');
       
       // Add the QR code
-      doc.addImage(qrCodeDataURL, 'PNG', (85 - qrSize) / 2 + 1, currentY + 1, qrSize - 2, qrSize - 2);
+      doc.addImage(qrCodeDataURL, 'PNG', 46, startY - 12, qrSize - 2, qrSize - 2);
+        // Add member name with large bold font below header
+      doc.setFillColor(240, 245, 255);
+      doc.roundedRect(3, startY + 15, 79, 12, 2, 2, 'F');
+      doc.setDrawColor(200, 220, 240);
+      doc.roundedRect(3, startY + 15, 79, 12, 2, 2, 'S');
       
-      // Add scan text
+      doc.setTextColor(51, 51, 153);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      
+      // Ensure name fits by reducing font size if needed
+      const nameWidth = doc.getStringUnitWidth(memberData.name) * 16 / doc.internal.scaleFactor;
+      if (nameWidth > 75) {
+        doc.setFontSize(14);
+      }
+      
+      doc.text(memberData.name.toUpperCase(), 42.5, startY + 23, { align: 'center' });      // Start the member info section
+      let currentY = startY + 30; // Position after the name
+      const rowHeight = 6; // Row height
+      const rowSpacing = 0.5; // Spacing between rows
+      
+      // Member ID field
+      doc.setFillColor(245, 248, 255);
+      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
+      
+      doc.setTextColor(50, 70, 150);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Member ID:', 10, currentY + 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(memberData.id, 75, currentY + 4, { align: 'right' });
+      
+      // Type field
+      currentY += rowHeight + rowSpacing;
+      doc.setFillColor(235, 240, 255);
+      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
+      
+      doc.setTextColor(50, 70, 150);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Type:', 10, currentY + 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(formatMemberType(memberData.memberType), 75, currentY + 4, { align: 'right' });
+      
+      // Phone field
+      currentY += rowHeight + rowSpacing;
+      doc.setFillColor(245, 248, 255);
+      doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
+      
+      doc.setTextColor(50, 70, 150);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Phone:', 10, currentY + 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(memberData.phoneNumber, 75, currentY + 4, { align: 'right' });
+      
+      // Class field (if applicable)
+      if (memberData.class) {
+        currentY += rowHeight + rowSpacing;
+        doc.setFillColor(235, 240, 255);
+        doc.roundedRect(6, currentY, 73, rowHeight, 1, 1, 'F');
+        
+        doc.setTextColor(50, 70, 150);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Class:', 10, currentY + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${memberData.class}${memberData.division ? ' - ' + memberData.division : ''}`, 75, currentY + 4, { align: 'right' });
+      }
+      
+      // Add address field
+      currentY += rowHeight + rowSpacing;
+      // Split address into multiple lines if needed
+      const addressLines = memberData.address.split('\n');
+      
+      // Calculate needed height based on lines
+      const addressHeight = Math.max(rowHeight, addressLines.length * 4);
+      
+      doc.setFillColor(245, 248, 255);
+      doc.roundedRect(6, currentY, 73, addressHeight, 1, 1, 'F');
+      
+      doc.setTextColor(50, 70, 150);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Address:', 10, currentY + 4);
+      
+      // Add each line of address
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(7);
-      doc.setTextColor(80, 80, 120);
-      doc.text('Scan to verify membership', 42.5, currentY + qrSize + 4, { align: 'center' });
       
+      for (let i = 0; i < addressLines.length; i++) {
+        doc.text(addressLines[i], 75, currentY + 3 + (i * 4), { align: 'right' });
+      }      currentY += addressHeight + 3;
+      
+    
       // Add decorative bottom bar with gradient
       const footerGradient = {
         startColor: [51, 103, 205],
         endColor: [51, 153, 255]
       };
-        // Create footer gradient manually
+      
+      // Create footer gradient manually
       for (let i = 0; i < 5; i++) {
         const y = 100 + i;
         const ratio = i / 5;
@@ -207,6 +272,11 @@ export default function MemberCardGenerator({ memberId }: MemberCardProps) {
         doc.setFillColor(r, g, b);
         doc.rect(0, y, 85, 1, 'F');
       }
+      
+      // Add library website or contact
+      doc.setFontSize(6);
+      doc.setTextColor(255, 255, 255);
+      doc.text(entityData.website || 'www.library.org', 42.5, 103, { align: 'center' });
       
       // Save the PDF
       doc.save(`Member_Card_${memberData.id}.pdf`);
