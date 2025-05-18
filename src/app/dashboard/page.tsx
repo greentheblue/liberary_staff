@@ -17,6 +17,8 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import QRCodeScanner from "@/components/members/qr-code-scanner";
+import { ScanLine } from "lucide-react";
 
 interface Member {
   id: string;
@@ -66,6 +68,7 @@ export default function Dashboard() {
   const [collectingBookId, setCollectingBookId] = useState<string | null>(null);
   const [showUncollectedBooksDialog, setShowUncollectedBooksDialog] = useState(false);
   const [checkingUncollectedBooks, setCheckingUncollectedBooks] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const searchMember = async () => {
     if (!memberId) {
       toast.error("Please enter a member ID");
@@ -272,43 +275,21 @@ export default function Dashboard() {
       setCollectingBookId(null);
     }
   };
-
-  // const returnBook = async (itemId: string) => {
-  //   try {
-  //     const response = await fetch(`/api/dashboard/issued-items/${itemId}`, {
-  //       method: "DELETE",
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error("Failed to return book");
-  //     }
-
-  //     toast.success("Book returned successfully");
-      
-  //     // Update the local state
-  //     const updatedIssuedBooks = memberIssuedBooks.map(issuedBook => {
-  //       const updatedItems = issuedBook.items.filter(item => item.id !== itemId);
-  //       // If no more uncollected items, remove the whole issue
-  //       if (updatedItems.length === 0) {
-  //         return null;
-  //       }
-  //       return {
-  //         ...issuedBook,
-  //         items: updatedItems
-  //       };
-  //     }).filter(Boolean) as IssuedBook[];
-      
-  //     setMemberIssuedBooks(updatedIssuedBooks);
-  //   } catch (error) {
-  //     console.error("Error returning book:", error);
-  //     toast.error("Failed to return book");
-  //   }
-  // };
   const handleKeyPress = (event: React.KeyboardEvent, action: () => void) => {
     if (event.key === "Enter") {
       action();
     }
-  };  const checkUncollectedBooks = () => {
+  };
+  const handleQRCodeScan = (scannedCode: string) => {
+    // The QR code scanner component already validates that it's a 10-digit number
+    setMemberId(scannedCode);
+    toast.success(`QR code scanned: ${scannedCode}`);
+    
+    // Automatically search for the member after scanning
+    setTimeout(() => {
+      searchMember();
+    }, 500);
+  };const checkUncollectedBooks = () => {
     if (!member) return;
     
     // If we're already showing the issue section, hide it
@@ -351,9 +332,8 @@ export default function Dashboard() {
           <CardDescription>
             Enter a member ID to search for a member and issue books
           </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-4">
+        </CardHeader>        <CardContent>
+          <div className="flex flex-col sm:flex-row items-end gap-4">
             <div className="flex-1">
               <Label htmlFor="memberId" className="mb-2 block">
                 Member ID
@@ -366,12 +346,23 @@ export default function Dashboard() {
                 placeholder="Enter member ID"
               />
             </div>
-            <Button 
-              onClick={searchMember}
-              disabled={loading}
-            >
-              {loading ? "Searching..." : "Search"}
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button 
+                variant="outline"
+                onClick={() => setIsQRScannerOpen(true)}
+                className="flex-1 sm:flex-none"
+              >
+                <ScanLine className="h-4 w-4 mr-2" />
+                Scan QR
+              </Button>
+              <Button 
+                onClick={searchMember}
+                disabled={loading}
+                className="flex-1 sm:flex-none"
+              >
+                {loading ? "Searching..." : "Search"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -603,21 +594,9 @@ export default function Dashboard() {
             >
               Close
             </Button>
-            {/* <Button
-              type="button"
-              variant="destructive"
-              onClick={() => {
-                setShowUncollectedBooksDialog(false);
-                setShowIssueSection(true);
-              }}
-            >
-              Issue Books Anyway
-            </Button> */}
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-
-      {!member && (
+      </Dialog>      {!member && (
         <div className="text-center p-8 border rounded-lg bg-muted/50">
           <h3 className="font-medium mb-2">Search for a member to begin</h3>
           <p className="text-sm text-muted-foreground">
@@ -625,6 +604,13 @@ export default function Dashboard() {
           </p>
         </div>
       )}
+
+      {/* QR Code Scanner Dialog */}
+      <QRCodeScanner 
+        open={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRCodeScan}
+      />
     </div>
   );
 }
