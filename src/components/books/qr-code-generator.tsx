@@ -65,7 +65,6 @@ export default function QRCodeGenerator({ books }: QRCodeGeneratorProps) {
       doc.text(book.title, 105, 150, { align: 'center' });
       doc.setFontSize(12);
       doc.text(`ID: ${book.id}`, 105, 160, { align: 'center' });
-      doc.text(`Author: ${book.author}`, 105, 170, { align: 'center' });
       
       // Add border around QR code
       doc.rect(60, 60, 90, 120);
@@ -101,53 +100,77 @@ export default function QRCodeGenerator({ books }: QRCodeGeneratorProps) {
           description: 'No books available to generate QR codes',
         });
         return;
-      }
-      
-      // Create PDF document (A4 size)
+      }        // Create PDF document (A4 size)
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-        const qrCodeSize = 45; // mm
-      const margin = 10; // mm
-      const boxSpacing = 5; // mm
-      const boxesPerRow = 3;
-      const boxesPerCol = 4;
+        // A4 size in mm is 210×297
+      const pageWidth = 210;
+      const pageHeight = 297;
+      
+      // Set fixed grid size: 5 columns and 6 rows
+      const boxesPerRow = 5;
+      const boxesPerCol = 6;
+      const boxesPerPage = boxesPerRow * boxesPerCol;
+      
+      // Calculate box size based on fixed grid
+      const margin = 6; // mm - reduced margin further
+      const boxSpacing = 0.5; // mm - minimal spacing between boxes
+      
+      // Calculate maximum possible size for QR code based on grid requirements
+      const availableWidthPerBox = (pageWidth - 2 * margin - (boxesPerRow - 1) * boxSpacing) / boxesPerRow;
+      const availableHeightPerBox = (pageHeight - 2 * margin - (boxesPerCol - 1) * boxSpacing) / boxesPerCol;
+      
+      // Ensure box is not too tall (keep some space for text)
+      const textAreaHeight = 10; // mm - space for title and ID
+      const qrCodeSize = Math.min(availableWidthPerBox - 4, availableHeightPerBox - textAreaHeight - 2);
+      
+      const boxWidth = qrCodeSize + 4; // Total width of a box
+      const boxHeight = qrCodeSize + textAreaHeight; // Total height of a box including text
       
       for (let i = 0; i < books.length; i++) {
         const book = books[i];
-        const boxIndex = i % (boxesPerRow * boxesPerCol);
-          // Add a new page if needed
-        if (boxIndex === 0 && i > 0) {
+        
+        // Calculate which page this box belongs to
+        const pageIndex = Math.floor(i / boxesPerPage);
+        
+        // Add a new page if needed
+        if (i > 0 && i % boxesPerPage === 0) {
           doc.addPage();
         }
         
-        const col = boxIndex % boxesPerRow;
-        const row = Math.floor(boxIndex / boxesPerRow);
+        // Calculate position within the current page
+        const positionOnPage = i % boxesPerPage;
+        const col = positionOnPage % boxesPerRow;
+        const row = Math.floor(positionOnPage / boxesPerRow);
         
-        // Calculate position
-        const xPosition = margin + col * (qrCodeSize + boxSpacing + 25);
-        const yPosition = margin + row * (qrCodeSize + boxSpacing + 30);
-        
-        // Generate QR code
+        // Calculate exact position with minimal spacing
+        const xPosition = margin + col * (boxWidth + boxSpacing);
+        const yPosition = margin + row * (boxHeight + boxSpacing);
+          // Generate QR code
         const qrCodeDataURL = await QRCode.toDataURL(book.id, {
           margin: 1,
-          width: 150,
+          width: 100, // Smaller size for 5x6 grid
         });
         
         // Add QR code to PDF
         doc.addImage(qrCodeDataURL, 'PNG', xPosition, yPosition, qrCodeSize, qrCodeSize);
         
-        // Add book info
-        doc.setFontSize(8);
-        doc.text(book.title.substring(0, 20) + (book.title.length > 20 ? '...' : ''), 
-                xPosition + qrCodeSize/2, yPosition + qrCodeSize + 10, { align: 'center' });
-        doc.setFontSize(7);
-        doc.text(`ID: ${book.id}`, xPosition + qrCodeSize/2, yPosition + qrCodeSize + 15, { align: 'center' });
+        // Add book info - title in smaller font
+        doc.setFontSize(6); // Smaller font for more compact layout
+        doc.text(book.title.substring(0, 18) + (book.title.length > 18 ? '...' : ''), 
+                xPosition + qrCodeSize/2, yPosition + qrCodeSize + 1.5, { align: 'center' });
         
-        // Add border around QR code box
-        doc.rect(xPosition - 2, yPosition - 2, qrCodeSize + 4, qrCodeSize + 20);
+        // Make book ID bold and slightly smaller
+        doc.setFontSize(10); // Reduced from 10
+        doc.setFont('helvetica', 'bold'); // Set font to bold for ID
+        doc.text(`${book.id}`, xPosition + qrCodeSize/2, yPosition + qrCodeSize + 7, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); // Reset font to normal
+        
+        // Add border around QR code box - smaller height
+        doc.rect(xPosition - 1, yPosition - 1, boxWidth, boxHeight);
       }
       
       // Save the PDF
