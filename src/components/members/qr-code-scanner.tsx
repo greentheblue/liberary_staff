@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { ScanLine, Camera, X } from 'lucide-react';
+import { ScanLine } from 'lucide-react';
 import jsQR from 'jsqr';
 
 interface QRCodeScannerProps {
@@ -41,6 +40,7 @@ export default function QRCodeScanner({ open, onClose, onScan }: QRCodeScannerPr
   useEffect(() => {
     if (open) {
       startScanning();
+      console.log(isScanning);
     } else {
       stopScanning();
     }
