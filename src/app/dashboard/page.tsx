@@ -25,8 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import QRCodeScanner from "@/components/members/qr-code-scanner";
-import { ScanLine, Phone, MapPin, Bookmark, User, School, CalendarDays, Loader2 } from "lucide-react";
-import Image from "next/image";
+import { ScanLine, Phone, MapPin, User, School, CalendarDays, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Member {
