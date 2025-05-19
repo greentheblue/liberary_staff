@@ -87,6 +87,14 @@ export async function POST(req: Request) {
     // Get entityId from cookie
    
     const entityId = session.user.entityId;
+    const staffId = session.user.id;
+
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in cookie" },
+        { status: 400 }
+      );
+    }
     
     if (!entityId) {
       return NextResponse.json(
@@ -120,6 +128,7 @@ export async function POST(req: Request) {
         availableCopies: parseInt(body.copies), // Initially all copies are available
         categoryId: body.categoryId,
         entityId: entityId,
+        createdBy: staffId,
       },
       include: {
         category: true,

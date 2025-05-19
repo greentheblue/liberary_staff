@@ -21,6 +21,7 @@ model Entity {
   headPerson     HeadPerson?    @relation("EntityToHeadPerson")
   issuedBooks    IssuedBook[]   @relation("EntityToIssuedBook")
   staff          Staff[]        @relation("EntityToStaff")
+  members        Member[]
 }
 
 model HeadPerson {
@@ -46,46 +47,70 @@ model ContactPerson {
 }
 
 model Staff {
-  id        String   @id @default(uuid())
-  name      String
-  gender    String
-  phone     String
-  email     String
-  address   String
-  entityId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  pasword   String?
-  entity    Entity   @relation("EntityToStaff", fields: [entityId], references: [id])
+  id                  String           @id @default(uuid())
+  name                String
+  gender              String
+  phone               String
+  email               String
+  address             String
+  entityId            String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  pasword             String?
+  entity              Entity           @relation("EntityToStaff", fields: [entityId], references: [id])
+  createdMembers      Member[]         @relation("StaffToMember")
+  createdCategories   BookCategory[]   @relation("StaffToBookCategory")
+  createdBooks        Book[]           @relation("StaffToBook")
+  createdIssuedBooks  IssuedBook[]     @relation("StaffToIssuedBook")
+  collectedItems      IssuedBookItem[] @relation("StaffToCollectedItem")
+  lastEditedMembers   Member[]         @relation("StaffToLastEditedMember")
+  lastEditedBooks     Book[]           @relation("StaffToLastEditedBook")
+  lastEditedCategories BookCategory[]  @relation("StaffToLastEditedCategory")
 
   @@index([entityId])
 }
 
 model Member {
-  id          String       @id
-  name        String
-  profileImage  String?
-  memberType  MemberType
-  gender      Gender
-  phoneNumber String
-  address     String
-  class       String?
-  division    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  issuedBooks IssuedBook[] @relation("MemberToIssuedBook")
+  id           String       @id
+  name         String
+  profileImage String?
+  memberType   MemberType
+  gender       Gender
+  phoneNumber  String
+  address      String
+  class        String?
+  division     String?
+  entityId     String
+  createdBy    String
+  lastEditedBy String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  entity       Entity       @relation(fields: [entityId], references: [id])
+  creator      Staff        @relation("StaffToMember", fields: [createdBy], references: [id])
+  lastEditor   Staff?       @relation("StaffToLastEditedMember", fields: [lastEditedBy], references: [id])
+  issuedBooks  IssuedBook[] @relation("MemberToIssuedBook")
+
+  @@index([entityId])
+  @@index([createdBy])
+  @@index([lastEditedBy])
 }
 
 model BookCategory {
-  id        String   @id @default(cuid())
-  name      String
-  entityId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  books     Book[]
-  entity    Entity   @relation("EntityToBookCategory", fields: [entityId], references: [id])
+  id           String   @id @default(cuid())
+  name         String
+  entityId     String
+  createdBy    String
+  lastEditedBy String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  books        Book[]
+  entity       Entity   @relation("EntityToBookCategory", fields: [entityId], references: [id])
+  creator      Staff    @relation("StaffToBookCategory", fields: [createdBy], references: [id])
+  lastEditor   Staff?   @relation("StaffToLastEditedCategory", fields: [lastEditedBy], references: [id])
 
   @@index([entityId])
+  @@index([createdBy])
+  @@index([lastEditedBy])
 }
 
 model Book {
@@ -96,29 +121,38 @@ model Book {
   availableCopies Int
   categoryId      String
   entityId        String
+  createdBy       String
+  lastEditedBy    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   category        BookCategory     @relation(fields: [categoryId], references: [id])
   entity          Entity           @relation("EntityToBook", fields: [entityId], references: [id])
+  creator         Staff            @relation("StaffToBook", fields: [createdBy], references: [id])
+  lastEditor      Staff?           @relation("StaffToLastEditedBook", fields: [lastEditedBy], references: [id])
   issuedBookItems IssuedBookItem[]
 
   @@index([categoryId])
   @@index([entityId])
+  @@index([createdBy])
+  @@index([lastEditedBy])
 }
 
 model IssuedBook {
-  id        String           @id @default(cuid())
-  issueDate DateTime         @default(now())
-  memberId  String
-  entityId  String
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  entity    Entity           @relation("EntityToIssuedBook", fields: [entityId], references: [id])
-  member    Member           @relation("MemberToIssuedBook", fields: [memberId], references: [id])
-  items     IssuedBookItem[]
+  id         String           @id @default(cuid())
+  issueDate  DateTime         @default(now())
+  memberId   String
+  entityId   String
+  createdBy  String
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  entity     Entity           @relation("EntityToIssuedBook", fields: [entityId], references: [id])
+  member     Member           @relation("MemberToIssuedBook", fields: [memberId], references: [id])
+  creator    Staff            @relation("StaffToIssuedBook", fields: [createdBy], references: [id])
+  items      IssuedBookItem[]
 
   @@index([memberId])
   @@index([entityId])
+  @@index([createdBy])
 }
 
 model IssuedBookItem {
@@ -126,13 +160,25 @@ model IssuedBookItem {
   bookId       String
   issuedBookId String
   collected    Boolean    @default(false)
+  collectedBy  String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   book         Book       @relation(fields: [bookId], references: [id])
   issuedBook   IssuedBook @relation(fields: [issuedBookId], references: [id], onDelete: Cascade)
+  collector    Staff?     @relation("StaffToCollectedItem", fields: [collectedBy], references: [id])
 
   @@index([bookId])
   @@index([issuedBookId])
+  @@index([collectedBy])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
 }
 
 enum MemberType {

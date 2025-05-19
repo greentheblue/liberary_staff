@@ -78,6 +78,7 @@ export async function PATCH( request: Request,
     }
     
     const entityId = session.user.entityId;
+    const staffId = session.user.id;
     
     if (!entityId) {
       return NextResponse.json(
@@ -100,6 +101,7 @@ export async function PATCH( request: Request,
       },
       data: {
         name: body.name,
+        lastEditedBy: staffId,
       },
     });
 

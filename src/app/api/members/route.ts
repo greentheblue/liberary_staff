@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {entityPrisma} from '@/lib/db';
 import { z } from 'zod';
+import { auth } from '@/auth';
 
 /**
  * Generates a unique 10-digit member ID that doesn't exist in the database
@@ -43,6 +44,31 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    const staffId = session.user.id;
+    
+    if (!entityId) {
+      return NextResponse.json(
+        { error: "Entity ID not found in session" },
+        { status: 400 }
+      );
+    }
+    
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
+        { status: 400 }
+      );
+    }
+    
     // Validate request body
     const validationResult = memberSchema.safeParse(body);
     
@@ -51,15 +77,16 @@ export async function POST(request: NextRequest) {
         { error: "Validation error", details: validationResult.error.format() },
         { status: 400 }
       );    }
-    
-    // Generate a unique ID for the new member
+      // Generate a unique ID for the new member
     const uniqueId = await generateUniqueId();
     
     // Create member with custom ID
     const member = await entityPrisma.member.create({
       data: {
         ...validationResult.data,
-        id: uniqueId
+        id: uniqueId,
+        entityId: entityId,
+        createdBy: staffId
       },
     });
     
@@ -75,15 +102,34 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const entityId = session.user.entityId;
+    
+    if (!entityId) {
+      return NextResponse.json(
+        { error: "Entity ID not found in session" },
+        { status: 400 }
+      );
+    }
+    
     // Get the entity information first
     const entity = await entityPrisma.entity.findFirst({
+      where: { id: entityId },
       select: { 
         type: true 
       }
     });
 
-    // Get members
+    // Get members for this entity only
     const members = await entityPrisma.member.findMany({
+      where: { entityId: entityId },
       orderBy: { createdAt: 'desc' },
     });
     

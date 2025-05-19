@@ -24,10 +24,18 @@ export async function PUT(
     }
     
     const entityId = session.user.entityId;
+    const staffId = session.user.id;
     
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
+    
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
         { status: 400 }
       );
     }
@@ -55,17 +63,16 @@ export async function PUT(
         { error: "Issued book item not found in this entity" },
         { status: 404 }
       );
-    }
-
-    // If marking as collected and it was previously not collected
+    }    // If marking as collected and it was previously not collected
     if (collected === true && !issuedBookItem.collected) {
-      // Update the issuedBookItem status
+      // Update the issuedBookItem status with collector info
       const updatedItem = await entityPrisma.issuedBookItem.update({
         where: {
           id: params.id,
         },
         data: {
-          collected: true
+          collected: true,
+          collectedBy: staffId
         },
         include: {
           book: {
@@ -77,7 +84,8 @@ export async function PUT(
             include: {
               member: true,
             }
-          }
+          },
+          collector: true
         }
       });
       
@@ -85,13 +93,14 @@ export async function PUT(
     } 
     // If marking as not collected and it was previously collected
     else if (collected === false && issuedBookItem.collected) {
-      // Update the issuedBookItem status
+      // Update the issuedBookItem status and remove collector info
       const updatedItem = await entityPrisma.issuedBookItem.update({
         where: {
           id: params.id,
         },
         data: {
-          collected: false
+          collected: false,
+          collectedBy: null
         },
         include: {
           book: {
@@ -103,7 +112,8 @@ export async function PUT(
             include: {
               member: true,
             }
-          }
+          },
+          collector: true
         }
       });
       
@@ -139,10 +149,18 @@ export async function DELETE(
     }
     
     const entityId = session.user.entityId;
+    const staffId = session.user.id;
     
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
+    
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
         { status: 400 }
       );
     }

@@ -55,10 +55,18 @@ export async function POST(req: Request) {
     }
     
     const entityId = session.user.entityId;
-    
+    const staffId = session.user.id;
+
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
+
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
         { status: 400 }
       );
     }
@@ -67,6 +75,7 @@ export async function POST(req: Request) {
       data: {
         name: body.name,
         entityId: entityId,
+        createdBy: staffId,
       },
     });
 

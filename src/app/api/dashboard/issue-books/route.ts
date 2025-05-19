@@ -6,20 +6,26 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { memberId, bookIds } = body;
-    
-   const session = await auth();
+     const session = await auth();
     if (!session) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
-    }
-    
+    }    
     const entityId = session.user.entityId;
+    const staffId = session.user.id;
     
     if (!entityId) {
       return NextResponse.json(
         { error: "Entity ID not found in cookie" },
+        { status: 400 }
+      );
+    }
+    
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
         { status: 400 }
       );
     }
@@ -97,9 +103,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-    }
-
-    // Create issued book record with related items (all initially uncollected)
+    }    // Create issued book record with related items (all initially uncollected)
     const issuedBook = await entityPrisma.issuedBook.create({
       data: {
         member: {
@@ -107,6 +111,9 @@ export async function POST(request: NextRequest) {
         },
         entity: {
           connect: { id: entityId }
+        },
+        creator: {
+          connect: { id: staffId }
         },
         items: {
           create: bookIds.map((bookId: string) => ({
@@ -116,9 +123,9 @@ export async function POST(request: NextRequest) {
             collected: false // Each book starts as uncollected
           }))
         }
-      },
-      include: {
+      },      include: {
         member: true,
+        creator: true,
         items: {
           include: {
             book: {

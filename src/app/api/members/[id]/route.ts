@@ -61,6 +61,23 @@ export async function PUT(
     const params = await context.params;
     const body = await request.json();
     
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const staffId = session.user.id;
+    
+    if (!staffId) {
+      return NextResponse.json(
+        { error: "Staff ID not found in session" },
+        { status: 400 }
+      );
+    }
+    
     const validationResult = memberSchema.safeParse(body);
     
     if (!validationResult.success) {
@@ -72,7 +89,10 @@ export async function PUT(
     
     const member = await entityPrisma.member.update({
       where: { id: params.id },
-      data: validationResult.data,
+      data: {
+        ...validationResult.data,
+        lastEditedBy: staffId
+      },
     });
     
     return NextResponse.json(member);
