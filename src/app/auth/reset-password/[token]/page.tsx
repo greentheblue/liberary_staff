@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, Eye, EyeOff, KeyRound, LibraryBig, LockKeyhole } from "lucide-react";
 
-// Client component that uses useSearchParams
-function ResetPasswordContent() {
+export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
@@ -27,10 +26,10 @@ function ResetPasswordContent() {
   
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  
+  const params = useParams();
+
   useEffect(() => {
-    const tokenParam = searchParams?.get("token");
+    const tokenParam = params?.token as string;
     
     if (!tokenParam) {
       setValidating(false);
@@ -39,27 +38,11 @@ function ResetPasswordContent() {
 
     setToken(tokenParam);
     
-    // Validate the token with an API call
-    const validateToken = async () => {
-      try {
-        const res = await fetch(`/api/auth/validate-token?token=${tokenParam}`);
-        const data = await res.json();
-        
-        if (data.success) {
-          setTokenValid(true);
-        } else {
-          setTokenValid(false);
-        }
-      } catch (error) {
-        console.error("Error validating token:", error);
-        setTokenValid(false);
-      } finally {
-        setValidating(false);
-      }
-    };
-
-    validateToken();
-  }, [searchParams]);
+    // Here you could validate the token with your API
+    // For better UX, we'll assume it's valid for now (the real validation happens when submitting)
+    setTokenValid(true);
+    setValidating(false);
+  }, [params]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -138,20 +121,16 @@ function ResetPasswordContent() {
   const redirectToLogin = () => {
     router.push("/auth/login");
   };
-  
+
   if (validating) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 dark bg-black">
-        <Card className="w-full max-w-md border border-border bg-card text-card-foreground">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-none shadow-lg">
           <CardHeader className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <LibraryBig className="h-6 w-6" />
-              <h1 className="text-xl font-semibold">Library Management</h1>
-            </div>
             <CardTitle className="text-xl">Verifying your request...</CardTitle>
           </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <div className="animate-spin h-8 w-8 border-2 border-primary rounded-full border-t-transparent"></div>
+          <CardContent className="flex justify-center">
+            <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
           </CardContent>
         </Card>
       </div>
@@ -160,28 +139,31 @@ function ResetPasswordContent() {
 
   if (!tokenValid && !isCompleted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 dark bg-black">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <Card className="border border-border bg-card text-card-foreground">
-            <CardHeader className="pb-2">
+          <Card className="border-none shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-pink-600 p-6 text-white">
               <div className="flex items-center justify-center space-x-2 mb-4">
-                <LibraryBig className="h-6 w-6" />
-                <h1 className="text-xl font-semibold">Library Management</h1>
+                <LibraryBig size={32} />
+                <h1 className="text-2xl font-bold">Library Management</h1>
               </div>
-              <CardTitle className="text-2xl font-bold text-center">Invalid Request</CardTitle>
-              <CardDescription className="text-center">
+            </div>
+            
+            <CardHeader className="pt-6 pb-2">
+              <CardTitle className="text-2xl font-bold text-center text-slate-800">Invalid Request</CardTitle>
+              <CardDescription className="text-center text-slate-500">
                 The password reset link is invalid or has expired.
               </CardDescription>
             </CardHeader>
             
             <CardContent className="pt-4 text-center">
-              <p className="text-muted-foreground mb-6">
+              <p className="text-slate-600 mb-6">
                 Please request a new password reset link from the forgot password page.
               </p>
               
               <Button 
                 onClick={() => router.push("/auth/forgot-password")}
-                className="mb-4"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 Request New Link
               </Button>
@@ -190,7 +172,7 @@ function ResetPasswordContent() {
             <CardFooter className="flex justify-center">
               <Link 
                 href="/auth/login" 
-                className="text-primary hover:underline flex items-center gap-2"
+                className="text-blue-600 hover:text-blue-800 flex items-center gap-2 hover:underline"
               >
                 <ArrowLeft size={16} /> Back to login
               </Link>
@@ -200,29 +182,32 @@ function ResetPasswordContent() {
       </div>
     );
   }
-  
+
   if (isCompleted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 dark bg-black">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <Card className="border border-border bg-card text-card-foreground">
-            <CardHeader className="pb-2">
+          <Card className="border-none shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
               <div className="flex items-center justify-center space-x-2 mb-4">
-                <LibraryBig className="h-6 w-6" />
-                <h1 className="text-xl font-semibold">Library Management</h1>
+                <LibraryBig size={32} />
+                <h1 className="text-2xl font-bold">Library Management</h1>
               </div>
-              <CardTitle className="text-2xl font-bold text-center">Password Reset Successfully</CardTitle>
-              <CardDescription className="text-center">
+            </div>
+            
+            <CardHeader className="pt-6 pb-2">
+              <CardTitle className="text-2xl font-bold text-center text-slate-800">Password Reset Successfully</CardTitle>
+              <CardDescription className="text-center text-slate-500">
                 Your password has been reset successfully
               </CardDescription>
             </CardHeader>
             
             <CardContent className="space-y-6 pt-4 text-center">
               <div className="flex justify-center">
-                <CheckCircle size={48} className="text-green-500" />
+                <CheckCircle size={64} className="text-green-500" />
               </div>
               
-              <p>
+              <p className="text-slate-600">
                 You can now login to your account with your new password.
               </p>
             </CardContent>
@@ -230,7 +215,7 @@ function ResetPasswordContent() {
             <CardFooter>
               <Button 
                 onClick={redirectToLogin}
-                className="w-full"
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md"
               >
                 Go to Login
               </Button>
@@ -240,18 +225,22 @@ function ResetPasswordContent() {
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 dark bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Card className="border border-border bg-card text-card-foreground">
-          <CardHeader className="pb-2">
+        <Card className="border-none shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <LibraryBig className="h-6 w-6" />
-              <h1 className="text-xl font-semibold">Library Management</h1>
+              <LibraryBig size={32} />
+              <h1 className="text-2xl font-bold">Library Management</h1>
             </div>
-            <CardTitle className="text-2xl font-bold text-center">Reset Password</CardTitle>
-            <CardDescription className="text-center">
+            <p className="text-blue-100 text-center">Create a new password</p>
+          </div>
+          
+          <CardHeader className="pt-6 pb-2">
+            <CardTitle className="text-2xl font-bold text-center text-slate-800">Reset Password</CardTitle>
+            <CardDescription className="text-center text-slate-500">
               Enter your new password below
             </CardDescription>
           </CardHeader>
@@ -259,16 +248,16 @@ function ResetPasswordContent() {
           <form onSubmit={onSubmit}>
             <CardContent className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="password" className="text-slate-700">New Password</Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                    <LockKeyhole size={16} />
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                    <LockKeyhole size={18} />
                   </div>
                   <Input
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    className="pl-10"
+                    className="pl-10 pr-10 bg-slate-50 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                     placeholder="Enter your new password"
                     required
                     value={formValues.password}
@@ -277,26 +266,26 @@ function ResetPasswordContent() {
                   />
                   <button 
                     type="button"
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
                     onClick={toggleShowPassword}
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">Password must be at least 8 characters long</p>
+                <p className="text-xs text-slate-500">Password must be at least 8 characters long</p>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-slate-700">Confirm Password</Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-                    <KeyRound size={16} />
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                    <KeyRound size={18} />
                   </div>
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    className="pl-10"
+                    className="pl-10 pr-10 bg-slate-50 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                     placeholder="Confirm your new password"
                     required
                     value={formValues.confirmPassword}
@@ -305,10 +294,10 @@ function ResetPasswordContent() {
                   />
                   <button 
                     type="button"
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
                     onClick={toggleShowConfirmPassword}
                   >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
@@ -317,12 +306,12 @@ function ResetPasswordContent() {
             <CardFooter className="flex flex-col gap-4">
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md" 
                 disabled={loading}
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -336,7 +325,7 @@ function ResetPasswordContent() {
               <div className="text-center">
                 <Link 
                   href="/auth/login" 
-                  className="text-primary hover:underline flex items-center justify-center gap-2"
+                  className="text-blue-600 hover:text-blue-800 flex items-center justify-center gap-2 hover:underline"
                 >
                   <ArrowLeft size={16} /> Back to login
                 </Link>
@@ -346,29 +335,5 @@ function ResetPasswordContent() {
         </Card>
       </div>
     </div>
-  );
-}
-
-// Main component with Suspense boundary
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center p-4 dark bg-black">
-        <Card className="w-full max-w-md border border-border bg-card text-card-foreground">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <LibraryBig className="h-6 w-6" />
-              <h1 className="text-xl font-semibold">Library Management</h1>
-            </div>
-            <CardTitle className="text-xl">Loading...</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <div className="animate-spin h-8 w-8 border-2 border-primary rounded-full border-t-transparent"></div>
-          </CardContent>
-        </Card>
-      </div>
-    }>
-      <ResetPasswordContent />
-    </Suspense>
   );
 }

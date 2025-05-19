@@ -49,11 +49,9 @@ export async function POST(request: NextRequest) {
         token,
         expiresAt,
       }
-    });
-
-    // Generate the reset link
+    });    // Generate the reset link
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "http://localhost:3000";
-    const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
+    const resetLink = `${baseUrl}/auth/reset-password/${token}`;
 
     // Send the email with the reset link
     const emailResult = await sendEmail({
