@@ -88,10 +88,10 @@ export default function ForgotPasswordPage() {
               
               <div className="space-y-2">
                 <p>
-                  We've sent a password reset link to your email address. Please check your inbox and follow the instructions.
+                  We&apos;ve sent a password reset link to your email address. Please check your inbox and follow the instructions.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  If you don't see the email, check your spam folder.
+                  If you don&apos;t see the email, check your spam folder.
                 </p>
               </div>
               
